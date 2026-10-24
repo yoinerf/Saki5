@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import {
   DOC_STATUS,
-  REQUIRED_DOCS,
+  PRODUCER_DOCS,
   VALIDATION_STATE,
   fetchDocuments,
   fetchManualVerifications,
@@ -21,7 +21,7 @@ interface ProducerDocumentsCardProps {
   onValidationChange?: (state: ValidationState) => void
 }
 
-// Carga del RUT y la Cámara de Comercio del productor. Cada carga queda "Pendiente"
+// Carga del RUT (obligatorio) y la Cámara de Comercio (opcional) del productor. Cada carga queda "Pendiente"
 // hasta que el administrador de su tienda la revise; reemplazar un documento
 // aprobado invalida la aprobación (lo aplica la BD).
 export default function ProducerDocumentsCard({ userId, style, onValidationChange }: ProducerDocumentsCardProps) {
@@ -82,7 +82,7 @@ export default function ProducerDocumentsCard({ userId, style, onValidationChang
         <div>
           <h3 style={{ margin: 0, fontFamily: "'Poppins', sans-serif", fontSize: 18, fontWeight: 700, color: '#1C3A14' }}>Documentos del productor</h3>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#8A8070' }}>
-            Para publicar productos o experiencias necesitas el RUT y la Cámara de Comercio aprobados. PDF, JPG o PNG de máximo 5 MB.
+            Para publicar productos o experiencias necesitas el RUT aprobado. La Cámara de Comercio es opcional. PDF, JPG o PNG de máximo 5 MB.
           </p>
         </div>
         <span style={{ background: vs.bg, color: vs.color, fontSize: 12, fontWeight: 800, padding: '5px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>{vs.label}</span>
@@ -95,13 +95,16 @@ export default function ProducerDocumentsCard({ userId, style, onValidationChang
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 14 }}>
-        {REQUIRED_DOCS.map(({ type, label }) => {
+        {PRODUCER_DOCS.map(({ type, label, required }) => {
           const doc = docs.find((d) => d.doc_type === type)
           const st = doc ? DOC_STATUS[doc.status] : null
           return (
             <div key={type} style={{ background: '#FDFAF6', border: '1px solid #EDE4D8', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontWeight: 800, color: '#205134' }}>{label}</span>
+                <span style={{ fontWeight: 800, color: '#205134' }}>
+                  {label}
+                  {!required && <span style={{ fontWeight: 600, color: '#8A8070', fontSize: 12 }}> (opcional)</span>}
+                </span>
                 {st
                   ? <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>{st.label}</span>
                   : <span style={{ background: '#F3ECE2', color: '#7A5C3A', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20 }}>Sin cargar</span>}

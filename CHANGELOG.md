@@ -9,6 +9,11 @@ Cambios importantes de El Campo Nos Une, de la versión más reciente a la más 
 
 ## [Sin publicar]
 
+**Changed**
+- Para verificar a un productor y permitirle publicar solo es obligatorio el RUT aprobado. La Cámara
+  de Comercio pasa a ser opcional (se puede seguir cargando y revisando). Requiere aplicar la migración
+  `20261024120000_rut_only_producer_validation.sql`.
+
 **New Features**
 - Páginas públicas de Política de privacidad (`/privacidad`) y Condiciones del servicio (`/terminos`),
   enlazadas desde el inicio de sesión, el registro y el formulario para completar el perfil. Necesarias

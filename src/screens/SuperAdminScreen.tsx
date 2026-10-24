@@ -57,7 +57,7 @@ interface UserRow {
   document_type?: string | null
   document_number?: string | null
   email?: string
-  // Verificado manualmente por el superadmin (sin RUT ni Cámara de Comercio)
+  // Verificado manualmente por el superadmin (sin RUT aprobado)
   manually_verified_at?: string | null
   phone?: string | null
   created_at: string
@@ -122,7 +122,7 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
   const [loading, setLoading] = useState(true)
 
   const [users, setUsers] = useState<UserRow[]>([])
-  // Productores y anfitriones con RUT y Cámara de Comercio aprobados
+  // Productores y anfitriones con RUT aprobado
   const [certifiedIds, setCertifiedIds] = useState<Set<string>>(new Set())
   const [products, setProducts] = useState<ProductRow[]>([])
   const [experiences, setExperiences] = useState<ExperienceRow[]>([])
@@ -219,12 +219,12 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
     }
   }
 
-  // Verificación manual del productor: puede publicar sin cargar RUT ni Cámara de Comercio
+  // Verificación manual del productor: puede publicar sin cargar el RUT
   const toggleManualVerification = async (u: UserRow, verified: boolean) => {
     const name = u.org_name?.trim() || `${u.first_name} ${u.last_name}`.trim()
     const confirmed = await confirmDialog(verified
-      ? { title: `¿Verificar a ${name}?`, message: 'Quedará verificado y podrá publicar sin cargar el RUT ni la Cámara de Comercio.', confirmText: 'Verificar' }
-      : { title: `¿Quitar la verificación de ${name}?`, message: 'Para volver a publicar necesitará el RUT y la Cámara de Comercio aprobados.', confirmText: 'Quitar verificación', tone: 'danger' })
+      ? { title: `¿Verificar a ${name}?`, message: 'Quedará verificado y podrá publicar sin cargar el RUT.', confirmText: 'Verificar' }
+      : { title: `¿Quitar la verificación de ${name}?`, message: 'Para volver a publicar necesitará el RUT aprobado.', confirmText: 'Quitar verificación', tone: 'danger' })
     if (!confirmed) return
     const { error } = await setManualVerification(u.id, verified)
     if (error) return showToast('❌ ' + error.message)
@@ -1211,7 +1211,7 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
                                         u.manually_verified_at ? (
                                           <button type="button" style={btnEdit} title="Verificado manualmente: quitar la verificación" onClick={() => toggleManualVerification(u, false)}>✖ Quitar verificación</button>
                                         ) : !certifiedIds.has(u.id) && (
-                                          <button type="button" style={btnEdit} title="Verificar al productor sin exigir RUT ni Cámara de Comercio" onClick={() => toggleManualVerification(u, true)}>✓ Verificar</button>
+                                          <button type="button" style={btnEdit} title="Verificar al productor sin exigir el RUT" onClick={() => toggleManualVerification(u, true)}>✓ Verificar</button>
                                         )
                                       )}
                                       <button type="button" style={btnEdit} title="Asignar contraseña temporal" onClick={() => setTempPasswordUser({ id: u.id, name: `${u.first_name} ${u.last_name}`.trim(), email: u.email })}>🔑</button>

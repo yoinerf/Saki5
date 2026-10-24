@@ -1,4 +1,4 @@
-// Insignia de productor verificado: RUT y Cámara de Comercio aprobados.
+// Insignia de productor verificado: RUT aprobado (o verificación manual).
 // Sin `label` es solo el ícono (junto a un nombre); con `label` es un tag.
 
 interface CertifiedBadgeProps {
@@ -20,7 +20,7 @@ export function CertifiedIcon({ size = 20 }: { size?: number }) {
 }
 
 export default function CertifiedBadge({ label, size = 20 }: CertifiedBadgeProps) {
-  const title = 'Productor verificado: RUT y Cámara de Comercio aprobados'
+  const title = 'Productor verificado: RUT aprobado'
   if (!label) {
     return (
       <span title={title} aria-label={title} style={{ display: 'inline-flex', verticalAlign: 'middle' }}>

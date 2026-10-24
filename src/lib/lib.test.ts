@@ -112,10 +112,12 @@ describe('orders', () => {
 describe('producerDocuments', () => {
   const doc = (doc_type: ProducerDocument['doc_type'], status: ProducerDocument['status']) => ({ doc_type, status }) as ProducerDocument
 
-  it('solo valida con los dos documentos aprobados', () => {
-    expect(validationState([doc('rut', 'aprobado'), doc('camara_comercio', 'aprobado')])).toBe('validado')
-    expect(validationState([doc('rut', 'aprobado'), doc('camara_comercio', 'rechazado')])).toBe('rechazado')
-    expect(validationState([doc('rut', 'aprobado')])).toBe('incompleto')
+  it('solo exige el RUT aprobado; la Cámara de Comercio es opcional', () => {
+    expect(validationState([doc('rut', 'aprobado')])).toBe('validado')
+    expect(validationState([doc('rut', 'aprobado'), doc('camara_comercio', 'rechazado')])).toBe('validado')
+    expect(validationState([doc('rut', 'aprobado'), doc('camara_comercio', 'pendiente')])).toBe('validado')
+    expect(validationState([doc('camara_comercio', 'aprobado')])).toBe('incompleto')
+    expect(validationState([doc('rut', 'rechazado'), doc('camara_comercio', 'aprobado')])).toBe('rechazado')
     expect(validationState([doc('rut', 'pendiente'), doc('camara_comercio', 'aprobado')])).toBe('pendiente')
   })
 
@@ -267,9 +269,9 @@ describe('verificación del productor', () => {
     expect(validationState([doc('rut', 'rechazado')], true)).toBe('validado')
   })
 
-  it('sin verificación manual siguen siendo obligatorios RUT y Cámara de Comercio', () => {
+  it('sin verificación manual sigue siendo obligatorio el RUT', () => {
     expect(validationState([])).toBe('incompleto')
-    expect(validationState([doc('rut', 'aprobado'), doc('camara_comercio', 'aprobado')])).toBe('validado')
+    expect(validationState([doc('rut', 'aprobado')])).toBe('validado')
   })
 })
 
