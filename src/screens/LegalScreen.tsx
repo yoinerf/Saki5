@@ -184,7 +184,7 @@ function TermsContent() {
       <Section title="3. Productores, tiendas y operadores de turismo">
         <List
           items={[
-            'Para publicar debes cargar la documentación solicitada (por ejemplo RUT y Cámara de Comercio) y ser aprobado por el administrador correspondiente.',
+            'Para publicar debes cargar la documentación solicitada (como mínimo el RUT) y ser aprobado por el administrador correspondiente.',
             'Debes publicar información, precios, fotografías y disponibilidad reales y mantenerlos actualizados.',
             'Debes cumplir las normas sanitarias, tributarias y de protección al consumidor que apliquen a tus productos o servicios.',
             'Debes atender los pedidos y reservas aceptados en los plazos y condiciones informados.',

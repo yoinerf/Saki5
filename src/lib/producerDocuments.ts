@@ -1,15 +1,19 @@
 import { supabase } from './supabase'
 import { confirmDialog } from '../components/ConfirmDialog'
 
-// Documentos que valida el administrador de la tienda antes de que un productor
-// pueda publicar (ver Instructions/migration_admin_tienda.sql).
+// Documentos que el productor carga y valida el administrador de la tienda
+// (ver Instructions/migration_admin_tienda.sql). Solo los marcados como obligatorios
+// cuentan para verificar al productor y permitirle publicar.
 export type DocType = 'rut' | 'camara_comercio'
 export type DocStatus = 'pendiente' | 'aprobado' | 'rechazado'
 
-export const REQUIRED_DOCS: { type: DocType; label: string }[] = [
-  { type: 'rut', label: 'RUT' },
-  { type: 'camara_comercio', label: 'Cámara de Comercio' },
+export const PRODUCER_DOCS: { type: DocType; label: string; required: boolean }[] = [
+  { type: 'rut', label: 'RUT', required: true },
+  { type: 'camara_comercio', label: 'Cámara de Comercio', required: false },
 ]
+
+// Debe coincidir con public.is_producer_validated en la BD
+export const REQUIRED_DOCS = PRODUCER_DOCS.filter((d) => d.required)
 
 export const DOC_LABELS: Record<DocType, string> = { rut: 'RUT', camara_comercio: 'Cámara de Comercio' }
 
@@ -38,7 +42,7 @@ export interface ProducerDocument {
   submitted_at: string
 }
 
-// Estado de validación del productor: solo puede publicar con los dos documentos aprobados
+// Estado de validación del productor: solo puede publicar con los documentos obligatorios (RUT) aprobados
 export type ValidationState = 'validado' | 'pendiente' | 'rechazado' | 'incompleto'
 
 export const VALIDATION_STATE: Record<ValidationState, { label: string; bg: string; color: string }> = {
@@ -62,14 +66,14 @@ export function validationState(docs: ProducerDocument[], manuallyVerified = fal
 }
 
 export const PUBLISH_BLOCKED_MESSAGE =
-  'Para publicar necesitas el RUT y la Cámara de Comercio aprobados por el administrador de tu tienda.'
+  'Para publicar necesitas el RUT aprobado por el administrador de tu tienda.'
 
 // Aviso cuando un productor sin documentos aprobados intenta publicar. true = quiere ir a cargarlos
 export function confirmGoToDocuments() {
   return confirmDialog({
     title: 'Aún no puedes publicar',
-    message: `${PUBLISH_BLOCKED_MESSAGE}\nCárgalos en tu perfil para que los revisen.`,
-    confirmText: 'Cargar documentos',
+    message: `${PUBLISH_BLOCKED_MESSAGE}\nCárgalo en tu perfil para que lo revisen.`,
+    confirmText: 'Cargar RUT',
     cancelText: 'Ahora no',
     tone: 'warning',
   })

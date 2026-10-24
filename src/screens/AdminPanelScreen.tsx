@@ -127,7 +127,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
   // Una notificación de pedido nuevo abre la sección de pedidos
   // Notificaciones: pedido nuevo abre Pedidos; revisión de documentos abre Configuración
   usePanelSectionRequest<AdminSection>((s) => { setSection(s); loadData(true) }, ['orders', 'settings'])
-  // Validación documental: sin RUT y Cámara de Comercio aprobados no se puede publicar (la BD lo bloquea)
+  // Validación documental: sin RUT aprobado no se puede publicar (la BD lo bloquea)
   const [validation, setValidation] = useState<ValidationState | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [products, setProducts] = useState<ProductItem[]>([])
@@ -579,7 +579,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
               {validation && validation !== 'validado' && (
                 <div style={{ background: '#FFF7E8', border: '1px solid #F0D099', borderRadius: 16, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ fontSize: 13, color: '#9B4728', fontWeight: 700 }}>
-                    {VALIDATION_STATE[validation].label}: aún no puedes publicar {isTurismo ? 'experiencias' : 'productos'}. Carga tu RUT y tu Cámara de Comercio y espera la aprobación del administrador de tu tienda.
+                    {VALIDATION_STATE[validation].label}: aún no puedes publicar {isTurismo ? 'experiencias' : 'productos'}. Carga tu RUT y espera la aprobación del administrador de tu tienda.
                   </div>
                   {section !== 'settings' && (
                     <button type="button" onClick={() => setSection('settings')} style={{ background: '#205134', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>

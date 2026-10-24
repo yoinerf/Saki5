@@ -32,12 +32,12 @@ const ROLE_INFO: Record<AddableRole, { emoji: string; description: string; verif
   asociacion: {
     emoji: '🌾',
     description: 'Vende los productos de tu finca, asociación o emprendimiento en la tienda.',
-    verification: 'Para publicar productos deberás cargar tu RUT y tu Cámara de Comercio y esperar su aprobación.',
+    verification: 'Para publicar productos deberás cargar tu RUT y esperar su aprobación.',
   },
   turismo: {
     emoji: '🏞️',
     description: 'Publica experiencias de turismo rural y recibe reservas.',
-    verification: 'Para publicar experiencias deberás cargar tu RUT y tu Cámara de Comercio y esperar su aprobación.',
+    verification: 'Para publicar experiencias deberás cargar tu RUT y esperar su aprobación.',
   },
 }
 

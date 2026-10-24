@@ -14,7 +14,7 @@ import { useStores } from '../lib/storesContext'
 import {
   DOC_LABELS,
   DOC_STATUS,
-  REQUIRED_DOCS,
+  PRODUCER_DOCS,
   VALIDATION_STATE,
   fetchDocuments,
   getDocumentUrl,
@@ -185,7 +185,7 @@ export default function StoreAdminScreen({ store, onNavigate }: Props) {
   usePanelSectionRequest<Section>((s) => { setSection(s); loadAll() }, ['dashboard', 'producers', 'review'])
 
   const docsOf = (producerId: string) => documents.filter((d) => d.producer_id === producerId)
-  // Verificado = RUT y Cámara de Comercio aprobados
+  // Verificado = RUT aprobado (la Cámara de Comercio es opcional)
   // Verificado manualmente por un superadmin: cuenta como validado aunque no tenga documentos
   const isManual = (producerId: string) => !!producers.find((p) => p.id === producerId)?.manually_verified_at
   const stateOf = (producerId: string) => validationState(docsOf(producerId), isManual(producerId))
@@ -543,13 +543,16 @@ export default function StoreAdminScreen({ store, onNavigate }: Props) {
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
-                              {REQUIRED_DOCS.map(({ type, label }) => {
+                              {PRODUCER_DOCS.map(({ type, label, required }) => {
                                 const doc = docs.find((d) => d.doc_type === type)
                                 const st = doc ? DOC_STATUS[doc.status] : null
                                 return (
                                   <div key={type} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                      <span style={{ fontWeight: 800, color: C.green, fontSize: 14 }}>{label}</span>
+                                      <span style={{ fontWeight: 800, color: C.green, fontSize: 14 }}>
+                                        {label}
+                                        {!required && <span style={{ fontWeight: 600, color: C.muted, fontSize: 12 }}> (opcional)</span>}
+                                      </span>
                                       {st ? <Pill {...st} /> : <Pill label="Sin cargar" bg="#F3ECE2" color="#7A5C3A" />}
                                     </div>
                                     {doc ? (

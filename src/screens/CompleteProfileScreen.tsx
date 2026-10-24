@@ -122,7 +122,7 @@ export default function CompleteProfileScreen({ onDone }: { onDone: () => void }
           </div>
           {accountType !== 'comprador' && (
             <p style={{ margin: '8px 2px 0', fontSize: 12, lineHeight: 1.45, color: '#6B7280', fontFamily: "'Nunito Sans', sans-serif" }}>
-              ¿Vendes en la Tienda Amazónica u otra tienda aliada? Pide al administrador que te asigne a tu tienda. Para publicar deberás cargar tu RUT y Cámara de Comercio.
+              ¿Vendes en la Tienda Amazónica u otra tienda aliada? Pide al administrador que te asigne a tu tienda. Para publicar deberás cargar tu RUT.
             </p>
           )}
         </div>
