@@ -1248,6 +1248,14 @@ export type Database = {
       }
     }
     Views: {
+      product_rating_stats: {
+        Row: {
+          product_id: string | null
+          rating: number | null
+          reviews: number | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           first_name: string | null
@@ -1281,6 +1289,7 @@ export type Database = {
         Returns: undefined
       }
       can_store_admin_manage: { Args: { p_user: string }; Returns: boolean }
+      cancel_expired_unpaid_orders: { Args: never; Returns: number }
       cancel_unpaid_store_orders: { Args: never; Returns: number }
       complete_my_profile: {
         Args: {
@@ -1314,6 +1323,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_order_customer: { Args: { p_order_id: string }; Returns: boolean }
       is_order_seller: { Args: { p_order_id: string }; Returns: boolean }
+      my_password_change_required: { Args: never; Returns: boolean }
       is_producer_validated: { Args: { p_user: string }; Returns: boolean }
       product_variant_label: {
         Args: { p_options: Json; p_product_id: string }
