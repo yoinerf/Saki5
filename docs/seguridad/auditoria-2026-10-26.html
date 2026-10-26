@@ -147,7 +147,7 @@
   <div class="meta"><span class="id">H2</span><span class="tag high">Alta</span><span class="tag ok">Corregido</span></div>
   <h3>Acaparamiento de inventario con pedidos sin pagar</h3>
   <p><code>create_store_order</code> descuenta el stock al crear el pedido y, hasta R3, los pedidos sin pagar no se liberaban solos. Un usuario podía llamar la RPC en bucle y dejar “Agotado” el catálogo de un productor.</p>
-  <p><strong>Corrección.</strong> Máximo <strong>10 pedidos por hora y 30 por día</strong> por usuario, con <code>enforce_rate_limit</code> dentro de la RPC. Un pedido que falla no cuenta. El mensaje al usuario es “Demasiadas solicitudes. Intenta de nuevo en N minuto(s).”, y el checkout ya lo muestra. Con R3, el stock de los pedidos sin pagar vuelve al catálogo cuando vence el plazo.</p>
+  <p><strong>Corrección.</strong> Máximo <strong>10 pedidos por hora y 30 por día</strong> por usuario, con un trigger en <code>orders</code> (<code>rate_limit_new_order</code>). Un pedido que falla no cuenta. El mensaje al usuario es “Demasiadas solicitudes. Intenta de nuevo en N minuto(s).”, y el checkout ya lo muestra. Con R3, el stock de los pedidos sin pagar vuelve al catálogo cuando vence el plazo.</p>
 </div>
 
 <div class="card">

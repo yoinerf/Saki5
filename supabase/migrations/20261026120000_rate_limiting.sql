@@ -7,7 +7,7 @@
 --   2. check_rate_limit(key, max, window): suma una solicitud y responde si se permite. Solo la puede
 --      ejecutar service_role (las Edge Functions; ver supabase/functions/_shared/rateLimit.ts).
 --   3. enforce_rate_limit(key, max, window): igual, pero lanza un error. Para usar dentro de RPC.
---   4. create_store_order: máximo 10 pedidos por hora y 30 por día por usuario. Cada pedido sin pagar
+--   4. Pedidos (create_store_order): máximo 10 por hora y 30 por día por usuario, con un trigger en orders. Cada pedido sin pagar
 --      reserva inventario, así que un usuario no puede vaciar el stock de un productor creando pedidos
 --      en bucle (ver docs/seguridad/auditoria-2026-10-19.md, recomendación 1). Los pedidos que fallan
 --      no cuentan (la transacción se revierte junto con el contador).
@@ -91,36 +91,33 @@ revoke execute on function public.check_rate_limit(text, integer, integer) from 
 revoke execute on function public.enforce_rate_limit(text, integer, integer) from public, anon, authenticated;
 grant execute on function public.check_rate_limit(text, integer, integer) to service_role;
 
--- ─── 4. create_store_order ────────────────────────────────────────────────────
--- Se edita la definición vigente (20261019190000_product_variants) en lugar de reescribirla.
-do $$
-declare
-  v_def text := pg_get_functiondef('public.create_store_order(text, text, jsonb, jsonb, numeric)'::regprocedure);
-  v_new text;
+-- ─── 4. Pedidos ───────────────────────────────────────────────────────────────
+-- Los pedidos solo se crean con create_store_order (no hay política de INSERT en orders), así que un
+-- trigger en orders limita los pedidos sin depender del texto de la función. Si se supera el límite,
+-- el error revierte todo el pedido (y el contador, que va en la misma transacción).
+create or replace function public.rate_limit_new_order()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
-  if position('enforce_rate_limit' in v_def) > 0 then
-    return;  -- ya aplicada
+  if auth.uid() is null or public.is_admin() then
+    return new;
   end if;
-
-  v_new := replace(v_def,
-    $q$raise exception 'Debes iniciar sesión para crear un pedido';
-  end if;$q$,
-    $q$raise exception 'Debes iniciar sesión para crear un pedido';
-  end if;
-
-  -- Rate limit: cada pedido sin pagar reserva inventario
-  perform public.enforce_rate_limit('create_store_order:h:' || v_user, 10, 3600);
-  perform public.enforce_rate_limit('create_store_order:d:' || v_user, 30, 86400);$q$);
-  if v_new = v_def then
-    raise exception 'create_store_order: no se encontró la validación de sesión';
-  end if;
-
-  execute v_new;
+  -- Cada pedido sin pagar reserva inventario
+  perform public.enforce_rate_limit('create_store_order:h:' || auth.uid(), 10, 3600);
+  perform public.enforce_rate_limit('create_store_order:d:' || auth.uid(), 30, 86400);
+  return new;
 end;
 $$;
 
-revoke execute on function public.create_store_order(text, text, jsonb, jsonb, numeric) from public, anon;
-grant execute on function public.create_store_order(text, text, jsonb, jsonb, numeric) to authenticated;
+drop trigger if exists trg_orders_rate_limit on public.orders;
+create trigger trg_orders_rate_limit
+  before insert on public.orders
+  for each row execute function public.rate_limit_new_order();
+
+revoke execute on function public.rate_limit_new_order() from public, anon, authenticated;
 
 -- ─── 5. Limpieza ──────────────────────────────────────────────────────────────
 select cron.schedule(
