@@ -16,6 +16,7 @@
 //   DEFAULT_COUNTRY_CODE      (opcional) por defecto "57" (Colombia)
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { checkRateLimits, clientIp, tooManyRequests } from '../_shared/rateLimit.ts'
 
 const PAYMENT_LABELS: Record<string, string> = {
   CashOnDelivery: 'Contraentrega',
@@ -46,6 +47,12 @@ function normalizePhone(raw: string | null | undefined, countryCode: string) {
   return null
 }
 
+// Rate limit: por IP antes de validar el secreto (frena la fuerza bruta) y por pedido (cada reenvío
+// manda WhatsApp pagos a los vendedores)
+const IP_LIMIT = { max: 60, windowSeconds: 60 }
+const ORDER_LIMIT = { max: 5, windowSeconds: 3600 }
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // Comparación en tiempo constante: no filtra el secreto por tiempos de respuesta
@@ -59,6 +66,13 @@ function safeEqual(a: string, b: string) {
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405)
+
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  const ipLimit = await checkRateLimits(admin, [{ key: `notify-order:ip:${clientIp(req)}`, ...IP_LIMIT }])
+  if (!ipLimit.allowed) return tooManyRequests(ipLimit.retryAfter)
 
   // Solo el Database Webhook (o quien tenga la clave) puede invocarla
   const expectedSecret = Deno.env.get('NOTIFY_WEBHOOK_SECRET')
@@ -81,11 +95,10 @@ Deno.serve(async (req) => {
     return json({ error: 'Solicitud inválida' }, 400)
   }
   const orderId: string | undefined = body?.record?.id ?? body?.order_id
-  if (!orderId) return json({ error: 'Falta el pedido' }, 400)
+  if (!orderId || typeof orderId !== 'string' || !UUID_RE.test(orderId)) return json({ error: 'Falta el pedido' }, 400)
 
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+  const orderLimit = await checkRateLimits(admin, [{ key: `notify-order:order:${orderId}`, ...ORDER_LIMIT }])
+  if (!orderLimit.allowed) return tooManyRequests(orderLimit.retryAfter)
 
   const { data: order, error: orderError } = await admin
     .from('orders')

@@ -125,8 +125,8 @@ function PrivacyContent() {
           ]}
         />
         <p style={p}>
-          Puedes actualizar parte de tus datos desde “Mi cuenta”. Para cualquier otra solicitud, incluida la eliminación de tu
-          cuenta, escríbenos a <Mail />. Respondemos las consultas en un máximo de 10 días hábiles y los reclamos en un máximo de
+          Puedes actualizar parte de tus datos y eliminar tu cuenta desde “Mi cuenta”. Para cualquier otra solicitud,
+          escríbenos a <Mail />. Respondemos las consultas en un máximo de 10 días hábiles y los reclamos en un máximo de
           15 días hábiles.
         </p>
       </Section>

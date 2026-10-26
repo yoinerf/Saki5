@@ -437,7 +437,9 @@ export default function TourismScreen({ onRequireAuth, onNavigate, activeNav, on
             >
               ←
             </button>
-            <span style={{ position: 'absolute', top: 16, right: 20, background: 'rgba(255,255,255,0.92)', color: '#205134', padding: '4px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>⭐ {selectedExperience.rating}</span>
+            {selectedExperience.reviews > 0 && (
+              <span style={{ position: 'absolute', top: 16, right: 20, background: 'rgba(255,255,255,0.92)', color: '#205134', padding: '4px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>⭐ {selectedExperience.rating}</span>
+            )}
             <div style={{ position: 'absolute', bottom: 16, left: 20, right: 20 }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 {selectedExperience.tags.map((t) => (
@@ -472,7 +474,8 @@ export default function TourismScreen({ onRequireAuth, onNavigate, activeNav, on
               {[
                 { icon: '⏱️', label: 'Duración', val: selectedExperience.duration },
                 { icon: '👥', label: 'Capacidad', val: selectedExperience.capacity },
-                { icon: '⭐', label: 'Calificación', val: `${selectedExperience.rating} (${selectedExperience.reviews} reseñas)` },
+                // Sin reseñas no se muestra una calificación (experiences.rating nace en 5 sin que nadie califique)
+                { icon: '⭐', label: 'Calificación', val: selectedExperience.reviews > 0 ? `${selectedExperience.rating} (${selectedExperience.reviews} reseñas)` : 'Sin reseñas aún' },
                 { icon: '💰', label: 'Precio por persona', val: formatPrice(selectedExperience.price) },
               ].map((item) => (
                 <div
@@ -797,8 +800,8 @@ export default function TourismScreen({ onRequireAuth, onNavigate, activeNav, on
                     zIndex: 5,
                   }}
                 >
-                  <span>⭐</span>
-                  <span>Experiencia Destacada</span>
+                  <span>📢</span>
+                  <span>Experiencia patrocinada</span>
                 </div>
 
                 {/* Contador de anuncios (ej: 2 / 3) */}
@@ -1122,7 +1125,7 @@ export default function TourismScreen({ onRequireAuth, onNavigate, activeNav, on
                           textTransform: 'uppercase',
                         }}
                       >
-                        📢 Destacado
+                        📢 Patrocinado
                       </span>
                       <span style={{ fontSize: 11, color: '#8C827A', fontWeight: 600 }}>El Campo Nos Une</span>
                     </div>

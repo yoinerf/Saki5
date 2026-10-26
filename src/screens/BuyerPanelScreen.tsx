@@ -7,6 +7,7 @@ import { clearPromoSession } from '../lib/promoSession'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABELS, roleRequirementsError, sellerRole } from '../lib/roles'
 import ChangePasswordCard from '../components/ChangePasswordCard'
+import DeleteAccountCard from '../components/DeleteAccountCard'
 import { supabase } from '../lib/supabase'
 import { fetchOrderStatuses, fetchStatusHistory, type OrderStatus, type StatusHistoryRow } from '../lib/orders'
 import { usePanelSectionRequest } from '../lib/notifications'
@@ -419,6 +420,8 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
 
   const saveReview = async () => {
     if (!reviewDraft) return
+    // Las estrellas empiezan vacías: la calificación la elige el comprador, no viene marcada
+    if (reviewDraft.rating < 1) { showToast('error', 'Elige de 1 a 5 estrellas.'); return }
     setSavingReview(true)
     const { error } = await supabase.from('product_reviews').upsert(
       { product_id: reviewDraft.productId, user_id: userId, rating: reviewDraft.rating, comment: reviewDraft.comment.trim() || null, updated_at: new Date().toISOString() },
@@ -552,7 +555,7 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
                   {historyOpen === it.id ? 'Ocultar historial' : 'Ver historial'}
                 </button>
                 {it.product_id && statusById.get(it.status_id)?.code === 'Delivered' && !reviewedProductIds.has(it.product_id) && (
-                  <button type="button" onClick={() => { setSection('reviews'); setReviewDraft({ productId: it.product_id!, rating: 5, comment: '' }) }} style={{ background: 'none', border: 'none', padding: 0, color: '#B8860B', fontSize: 12, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}>
+                  <button type="button" onClick={() => { setSection('reviews'); setReviewDraft({ productId: it.product_id!, rating: 0, comment: '' }) }} style={{ background: 'none', border: 'none', padding: 0, color: '#B8860B', fontSize: 12, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}>
                     ⭐ Calificar producto
                   </button>
                 )}
@@ -846,7 +849,7 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
                           {it.img && <img src={it.img} alt={it.title} style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover' }} />}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{it.title}</div>
-                            <button type="button" style={{ ...btnGhost, marginTop: 6, padding: '6px 12px' }} onClick={() => setReviewDraft({ productId: it.product_id!, rating: 5, comment: '' })}>⭐ Calificar</button>
+                            <button type="button" style={{ ...btnGhost, marginTop: 6, padding: '6px 12px' }} onClick={() => setReviewDraft({ productId: it.product_id!, rating: 0, comment: '' })}>⭐ Calificar</button>
                           </div>
                         </div>
                       ))}
@@ -1068,6 +1071,7 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
                 </div>
               </div>
               <ChangePasswordCard />
+              <DeleteAccountCard />
               </div>
             )}
 

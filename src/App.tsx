@@ -94,7 +94,7 @@ function AppContent() {
   const { allStores, alliedStores, getStore } = useStores()
   // Sesión y perfil (rol y tienda del usuario) los carga AuthProvider
   // userRole es el rol activo: una cuenta con varios roles (p. ej. Comprador + Asociación) usa la app con uno a la vez
-  const { session, role: userRole, store: userStore, profileLoadId, needsProfileCompletion, refreshProfile, setActiveRole } = useAuth()
+  const { session, role: userRole, store: userStore, profileLoadId, needsProfileCompletion, mustChangePassword: passwordFlag, refreshProfile, setActiveRole } = useAuth()
   // Pantalla y tienda de la URL con la que se abrió la app
   const [initialRoute] = useState(() => routeFromPath(window.location.pathname, allStores))
 
@@ -166,8 +166,9 @@ function AppContent() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // Contraseña temporal asignada por el admin: obligar a cambiarla
-  const mustChangePassword = !!session?.user.user_metadata?.must_change_password
+  // Contraseña temporal asignada por el admin: obligar a cambiarla. La marca de la base no la puede
+  // quitar el usuario; la de user_metadata se mantiene para cuentas marcadas antes de la migración.
+  const mustChangePassword = passwordFlag || !!session?.user.user_metadata?.must_change_password
   useEffect(() => {
     if (mustChangePassword) setPasswordMode((prev) => prev ?? 'forced')
   }, [mustChangePassword])

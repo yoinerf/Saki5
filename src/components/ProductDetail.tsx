@@ -102,10 +102,28 @@ export default function ProductDetail({
   }
   const [reviewsList, setReviewsList] = useState<ReviewWithAuthor[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
-  const [newRating, setNewRating] = useState(5)
+  // Sin estrellas marcadas: la calificación la elige el comprador
+  const [newRating, setNewRating] = useState(0)
   const [newComment, setNewComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewMsg, setReviewMsg] = useState('')
+  // Solo califica quien recibió el producto (la base lo exige: guard_product_review). null = sin sesión o cargando
+  const [canReview, setCanReview] = useState<boolean | null>(null)
+
+  const checkCanReview = async () => {
+    setCanReview(null)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || product.type === 'experiencia') return
+    const { data, error } = await supabase
+      .from('order_items')
+      .select('id, status:order_statuses!inner(code), order:orders!inner(customer_id)')
+      .eq('product_id', product.id)
+      .eq('order.customer_id', user.id)
+      .eq('status.code', 'Delivered')
+      .limit(1)
+    // Si la consulta falla se muestra el formulario y la base decide al enviar
+    setCanReview(error ? true : (data ?? []).length > 0)
+  }
 
   const loadProductReviews = async () => {
     setLoadingReviews(true)
@@ -130,12 +148,17 @@ export default function ProductDetail({
     setMainImg(product.img)
     setActiveTab('descripcion')
     loadProductReviews()
+    checkCanReview()
   }, [product.id])
 
   const handleSendReview = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       setReviewMsg('Debes iniciar sesión para calificar este producto.')
+      return
+    }
+    if (newRating < 1) {
+      setReviewMsg('Debes elegir de 1 a 5 estrellas.')
       return
     }
     setSubmittingReview(true)
@@ -594,7 +617,7 @@ export default function ProductDetail({
               [
                 { key: 'descripcion', label: 'Descripción' },
                 { key: 'origen', label: 'Origen y Productor' },
-                { key: 'impacto', label: 'Envío e Impacto' },
+                { key: 'impacto', label: 'Envío' },
                 { key: 'resenas', label: `Reseñas (${product.reviews})` },
               ] as const
             ).map((tab) => (
@@ -683,9 +706,9 @@ export default function ProductDetail({
                   >
                     Productor
                   </h2>
+                  {/* Solo datos reales del productor: antes había un texto genérico igual para todos */}
                   <p style={{ fontSize: 13, color: '#555', lineHeight: 1.75, margin: '0 0 14px' }}>
-                    <strong>{product.producer}</strong> trabaja desde hace años en las tierras colombianas,
-                    preservando variedades nativas y técnicas de cultivo que pasan de generación en generación.
+                    Vendido directamente por <strong>{product.producer}</strong>.
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {[
@@ -699,22 +722,6 @@ export default function ProductDetail({
                       </div>
                     ))}
                   </div>
-                </div>
-                <div
-                  style={{
-                    background: '#FFF8F0',
-                    border: '1px solid #F5D8C0',
-                    borderRadius: 16,
-                    padding: 18,
-                  }}
-                >
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#9B4728', letterSpacing: 1, marginBottom: 8 }}>
-                    ORIGEN DEL PRODUCTO
-                  </div>
-                  <p style={{ fontSize: 13, color: '#6B3E26', lineHeight: 1.65, margin: 0 }}>
-                    Proveniente de las regiones agrícolas de Colombia, este {product.type === 'experiencia' ? 'servicio' : 'producto'} fue
-                    elaborado con el mayor cuidado y dedicación, respetando las tradiciones locales y el medioambiente.
-                  </p>
                 </div>
               </>
             )}
@@ -730,27 +737,15 @@ export default function ProductDetail({
                       fontWeight: 700,
                     }}
                   >
-                    Envío y Logística
+                    Envío
                   </h2>
+                  {/* Igual que el checkout: el envío lo acuerda cada productor (antes se prometían envíos en
+                      48 horas, empaques biodegradables y reforestación que la plataforma no garantiza) */}
                   <p style={{ fontSize: 13, color: '#555', lineHeight: 1.75, margin: 0 }}>
-                    Realizamos envíos en 48 horas hábiles a todo el país. Los productos frescos son empacados cuidadosamente
-                    para preservar su calidad. Trabajamos con operadores logísticos locales para reducir la huella de carbono.
-                  </p>
-                </div>
-                <div
-                  style={{
-                    background: '#F0F7EC',
-                    border: '1px solid #C8E0BC',
-                    borderRadius: 16,
-                    padding: 18,
-                  }}
-                >
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#205134', letterSpacing: 1, marginBottom: 8 }}>
-                    IMPACTO AMBIENTAL
-                  </div>
-                  <p style={{ fontSize: 13, color: '#3D5C35', lineHeight: 1.65, margin: 0 }}>
-                    Empaques 100% biodegradables. Por cada compra contribuyes a la reforestación de 1m² en zonas de
-                    amortiguación de reservas naturales colombianas.
+                    {product.type === 'experiencia'
+                      ? <>El punto de encuentro, el horario y los detalles los coordina {product.producer} contigo después de la reserva.</>
+                      : <>El tiempo y el costo del envío los acuerda {product.producer} contigo después de hacer el pedido,
+                        según tu ubicación. En el checkout el envío aparece como “A convenir con el productor”.</>}
                   </p>
                 </div>
               </>
@@ -758,6 +753,11 @@ export default function ProductDetail({
             {activeTab === 'resenas' && (
               <>
                 {/* Formulario para calificar */}
+                {canReview === false ? (
+                  <div style={{ background: '#FAF7F2', border: '1px solid #E8DED0', borderRadius: 16, padding: 14, fontSize: 13, color: '#666' }}>
+                    Solo quienes recibieron este producto pueden calificarlo. Cuando tu pedido esté entregado, podrás dejar tu reseña aquí o en la sección Reseñas de tu panel.
+                  </div>
+                ) : (
                 <div
                   style={{
                     background: '#fff',
@@ -841,6 +841,7 @@ export default function ProductDetail({
 
 
                 </div>
+                )}
 
                 {/* Lista de Reseñas */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>

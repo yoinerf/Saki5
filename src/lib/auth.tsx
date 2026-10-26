@@ -26,6 +26,11 @@ export interface AuthState {
    * sin formulario de registro no tiene documento, ubicación ni tipo de cuenta elegido.
    */
   needsProfileCompletion: boolean
+  /**
+   * Contraseña temporal asignada por un admin (public.password_change_required). La base la apaga
+   * sola cuando la contraseña cambia; el usuario no la puede quitar editando sus metadatos.
+   */
+  mustChangePassword: boolean
   /** true hasta conocer la sesión inicial y su perfil */
   loading: boolean
   /** Aumenta cada vez que termina de cargarse un perfil (inicio de sesión, cambio de usuario...) */
@@ -39,7 +44,7 @@ interface AuthContextValue extends AuthState {
   setActiveRole: (role: UserRole) => void
 }
 
-const initialState: AuthState = { session: null, roles: [], store: MAIN_STORE, needsProfileCompletion: false, loading: true, profileLoadId: 0 }
+const initialState: AuthState = { session: null, roles: [], store: MAIN_STORE, needsProfileCompletion: false, mustChangePassword: false, loading: true, profileLoadId: 0 }
 
 const AuthContext = createContext<AuthContextValue>({ ...initialState, refreshProfile: async () => {}, setActiveRole: () => {} })
 
@@ -62,9 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const [{ data }, { data: roleRows }] = await Promise.all([
+    const [{ data }, { data: roleRows }, { data: mustChangePassword }] = await Promise.all([
       supabase.from('profiles').select('user_type, store, document_number').eq('id', session.user.id).single(),
       supabase.from('profile_roles').select('role').eq('profile_id', session.user.id),
+      supabase.rpc('my_password_change_required'),
     ])
     if (loadId !== latestLoad.current) return
 
@@ -78,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       store: data?.store ?? MAIN_STORE,
       // Sin fila en profiles (no se creó al registrarse) también se completa: la RPC la crea
       needsProfileCompletion: !data || (isOAuthUser(session) && !data.document_number && role !== 'admin' && role !== 'admin_tienda'),
+      mustChangePassword: mustChangePassword === true,
       loading: false,
       profileLoadId: prev.profileLoadId + 1,
     }))

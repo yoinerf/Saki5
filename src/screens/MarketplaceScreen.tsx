@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import ScreenShell from '../components/ScreenShell'
 import ProductModal, { type ProductFormData } from '../components/ProductModal'
 import { supabase } from '../lib/supabase'
+import { fetchRatingStats } from '../lib/ratings'
 import { hasSeenPromoInSession, markPromoAsSeenInSession } from '../lib/promoSession'
 import { isAdvertisementActive } from '../lib/dateColombia'
 import { MAIN_STORE, cartKey, isMainStore, type StoreId } from '../lib/stores'
@@ -113,9 +114,9 @@ export default function MarketplaceScreen({
   const animationTimer = useRef<number | null>(null)
   const loadProducts = async () => {
     try {
-      const [{ data: productsData, error: prodErr }, { data: reviewsData }, { data: categoriesData }] = await Promise.all([
+      const [{ data: productsData, error: prodErr }, ratingStats, { data: categoriesData }] = await Promise.all([
         supabase.from('products').select('*, images(*), profiles:public_profiles(org_name, first_name, last_name), product_variant_attributes(name, options, position), product_variants(id, options, stock, price, image_url, active, position)').eq('store', store).order('created_at', { ascending: false }),
-        supabase.from('product_reviews').select('product_id, rating'),
+        fetchRatingStats(),
         supabase.from('categories').select('id, name')
       ])
 
@@ -125,22 +126,12 @@ export default function MarketplaceScreen({
         return
       }
 
-      const reviewsMap: Record<string, number[]> = {}
-      if (reviewsData && Array.isArray(reviewsData)) {
-        for (const r of reviewsData) {
-          if (r.product_id) {
-            if (!reviewsMap[r.product_id]) reviewsMap[r.product_id] = []
-            reviewsMap[r.product_id].push(r.rating)
-          }
-        }
-      }
 
       const processed: Product[] = (productsData || []).map((p) => {
-        const ratings = reviewsMap[p.id] || []
-        const count = ratings.length
-        const avgRating = count > 0
-          ? Number((ratings.reduce((sum, val) => sum + val, 0) / count).toFixed(1))
-          : (p.rating ?? 5)
+        // Sin reseñas no hay calificación que mostrar
+        const stats = ratingStats.get(p.id)
+        const count = stats?.reviews ?? 0
+        const avgRating = stats?.rating ?? 0
 
         const catName = categoriesData?.find((c) => c.id === p.category_id)?.name || 'Sin categoría'
         const { attributes: variantAttributes, variants } = normalizeVariants(p.product_variant_attributes, p.product_variants)
@@ -864,8 +855,8 @@ export default function MarketplaceScreen({
                     zIndex: 5,
                   }}
                 >
-                  <span>⭐</span>
-                  <span>Destacado</span>
+                  <span>📢</span>
+                  <span>Patrocinado</span>
                 </div>
 
                 {/* Contador de anuncios (ej: 2 / 3) — solo si hay más de uno */}
@@ -1201,7 +1192,7 @@ export default function MarketplaceScreen({
                           textTransform: 'uppercase',
                         }}
                       >
-                        📢 Destacado
+                        📢 Patrocinado
                       </span>
                       <span style={{ fontSize: 11, color: '#8C827A', fontWeight: 600 }}>{storeConfig.name}</span>
                     </div>
