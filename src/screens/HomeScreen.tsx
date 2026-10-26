@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import ScreenShell from '../components/ScreenShell'
 import { supabase } from '../lib/supabase'
+import { fetchRatingStats } from '../lib/ratings'
 import { isAdvertisementActive } from '../lib/dateColombia'
 import AutoCarousel from '../components/AutoCarousel'
 import bannerPrincipal from '../assets/banner-principal.webp'
@@ -21,7 +22,9 @@ interface FeaturedProduct {
   id: string
   title: string
   producer: string
+  // Promedio de reseñas reales; 0 = sin reseñas
   rating: number
+  reviews: number
   price: number
   img: string
 }
@@ -173,31 +176,21 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
 
       // ══════ PRODUCTOS PATROCINADOS (via advertisements) ══════
       try {
-        const [{ data: products }, { data: reviewsData }, { data: adsData }] = await Promise.all([
+        const [{ data: products }, ratingStats, { data: adsData }] = await Promise.all([
           // Solo productos de El Campo Nos Une (los de las tiendas aliadas no salen aquí)
           supabase.from('products').select('id, title, producer, rating, price, outstanding, images(*), profiles:public_profiles(org_name, first_name, last_name)').eq('store', 'campo').order('created_at', { ascending: false }).limit(30),
-          supabase.from('product_reviews').select('product_id, rating'),
+          fetchRatingStats(),
           supabase.from('advertisements').select('*').order('created_at', { ascending: false }),
         ])
 
-        const reviewsMap: Record<string, number[]> = {}
-        if (reviewsData) {
-          for (const r of reviewsData) {
-            if (r.product_id) {
-              if (!reviewsMap[r.product_id]) reviewsMap[r.product_id] = []
-              reviewsMap[r.product_id].push(r.rating)
-            }
-          }
-        }
 
         // Filtrar anuncios activos según la hora oficial de Colombia
         const activeProductAds = (adsData || []).filter(ad => ad.type === 'product' && isAdvertisementActive(ad))
 
         const processed = (products ?? []).map((p) => {
-          const ratings = reviewsMap[p.id] || []
-          const avg = ratings.length > 0
-            ? Number((ratings.reduce((sum, val) => sum + val, 0) / ratings.length).toFixed(1))
-            : (p.rating ?? 5)
+          const stats = ratingStats.get(p.id)
+          // Sin reseñas no se muestra calificación (antes se mostraba un 5 que nadie dio)
+          const avg = stats?.rating ?? 0
           const primaryImg = primaryImageUrl(p.images, PLACEHOLDER_PRODUCT_IMG)
 
           const matchingAd = activeProductAds.find((ad) => ad.product_id === p.id)
@@ -219,6 +212,7 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
             title: matchingAd?.title || p.title,
             img: matchingAd?.image_url || primaryImg,
             rating: avg,
+            reviews: stats?.reviews ?? 0,
             isAdFeatured,
             isOutstandingValid,
           }
@@ -245,7 +239,8 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
                 producer: producerName,
                 title: ad.title || missingProd.title,
                 img: ad.image_url || primaryImg,
-                rating: missingProd.rating ?? 5,
+                rating: ratingStats.get(missingProd.id)?.rating ?? 0,
+                reviews: ratingStats.get(missingProd.id)?.reviews ?? 0,
                 isAdFeatured: true,
                 isOutstandingValid: true,
               })
@@ -542,7 +537,7 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
                       {formatPrice(item.price)}
                     </span>
                     <span style={{ fontSize: 12, color: '#3D7A28', fontFamily: "'Nunito Sans', sans-serif" }}>
-                      ⭐ {item.rating}
+                      {item.reviews > 0 ? `⭐ ${item.rating}` : 'Nuevo'}
                     </span>
                   </div>
                 </div>

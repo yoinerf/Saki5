@@ -7,6 +7,7 @@ import { persistProductVariants } from '../lib/variants'
 import { deleteExperienceWithFiles, deleteProductWithFiles } from '../lib/storageCleanup'
 import OrdersTable, { OrderStatusSummary } from '../components/OrdersTable'
 import ChangePasswordCard from '../components/ChangePasswordCard'
+import DeleteAccountCard from '../components/DeleteAccountCard'
 import NotificationBell from '../components/NotificationBell'
 import { usePanelSectionRequest } from '../lib/notifications'
 import ProducerDocumentsCard from '../components/ProducerDocumentsCard'
@@ -887,6 +888,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
                   </div>
                   {profile.id && <ProducerDocumentsCard userId={profile.id} style={{ marginTop: 20 }} onValidationChange={setValidation} />}
                   <ChangePasswordCard style={{ marginTop: 20, borderRadius: 24, padding: 36 }} />
+                  <DeleteAccountCard style={{ marginTop: 20, borderRadius: 24, padding: 36 }} />
                 </div>
               )}
             </>

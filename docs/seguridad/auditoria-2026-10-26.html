@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auditoría de seguridad Saki5</title>
+<style>
+  :root {
+    --bg: #faf7f2; --surface: #ffffff; --text: #1f2a1c; --muted: #5f6b5a; --border: #e6ddd0;
+    --accent: #205134; --accent-soft: #eaf3ec;
+    --crit: #9b1c1c; --crit-bg: #fde8e8; --high: #b45309; --high-bg: #fdf0e1;
+    --med: #8a6100; --med-bg: #fbf3d9; --low: #2f5f8a; --low-bg: #e6eff8; --info: #555; --info-bg: #eeeeee;
+    --ok: #1d6b3a; --ok-bg: #e3f3e8; --pend: #7a4a00; --pend-bg: #fbeed7;
+    --code-bg: #f3efe8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141814; --surface: #1c221c; --text: #e7ebe4; --muted: #a3ad9e; --border: #2f382f;
+      --accent: #8fd1a5; --accent-soft: #1f3326;
+      --crit: #ff9b9b; --crit-bg: #3a1c1c; --high: #f5b971; --high-bg: #3a2a14; --med: #e9cd72; --med-bg: #343017;
+      --low: #9cc4ec; --low-bg: #1a2a3a; --info: #bbb; --info-bg: #2a2a2a;
+      --ok: #8fd1a5; --ok-bg: #1d3325; --pend: #f2c36b; --pend-bg: #3a2e14; --code-bg: #232a23;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141814; --surface: #1c221c; --text: #e7ebe4; --muted: #a3ad9e; --border: #2f382f;
+    --accent: #8fd1a5; --accent-soft: #1f3326;
+    --crit: #ff9b9b; --crit-bg: #3a1c1c; --high: #f5b971; --high-bg: #3a2a14; --med: #e9cd72; --med-bg: #343017;
+    --low: #9cc4ec; --low-bg: #1a2a3a; --info: #bbb; --info-bg: #2a2a2a;
+    --ok: #8fd1a5; --ok-bg: #1d3325; --pend: #f2c36b; --pend-bg: #3a2e14; --code-bg: #232a23;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; color: var(--accent); }
+  h2 { font-size: 20px; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 0 0 6px; }
+  p { margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 13px; word-break: break-word; }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0 8px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 26px; line-height: 1.1; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin: 0 0 12px; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .card ul { margin: 0 0 12px; padding-left: 20px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .crit { color: var(--crit); background: var(--crit-bg); }
+  .high { color: var(--high); background: var(--high-bg); }
+  .med { color: var(--med); background: var(--med-bg); }
+  .low { color: var(--low); background: var(--low-bg); }
+  .info { color: var(--info); background: var(--info-bg); }
+  .ok { color: var(--ok); background: var(--ok-bg); }
+  .pend { color: var(--pend); background: var(--pend-bg); }
+  .id { color: var(--muted); font-weight: 600; font-size: 12px; padding: 2px 0; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  ol, ul { padding-left: 22px; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Auditoría de seguridad — Saki5 (El Campo Nos Une)</h1>
+<p class="sub">26 de octubre de 2026 · Rama <code>security/analisis-seguridad</code>, creada desde <code>dev</code> en <code>bc9ce98</code> · Sigue a la auditoría del 2026-10-19 (<code>docs/seguridad/auditoria-2026-10-19.md</code>)</p>
+
+<div class="grid">
+  <div class="stat"><b>10</b><span>hallazgos corregidos (H1–H10)</span></div>
+  <div class="stat"><b>8 de 10</b><span>pendientes resueltos en código (R1–R10)</span></div>
+  <div class="stat"><b>0</b><span>vulnerabilidades en dependencias (producción y desarrollo)</span></div>
+  <div class="stat"><b>4</b><span>migraciones nuevas, probadas en Postgres 16 local</span></div>
+</div>
+
+<div class="note">
+  <strong>Alcance y límites.</strong> Se revisó el código del repositorio: frontend React (<code>src/</code>), Edge Functions
+  (<code>admin-users</code>, <code>notify-order</code>), las 15 migraciones, la configuración de Azure Static Web Apps, el CI y las
+  dependencias. <strong>No hubo acceso a la base en vivo</strong>: las tablas y políticas RLS originales se crearon desde el dashboard
+  y no están en las migraciones, así que las políticas base no se pudieron leer directamente. Las conclusiones sobre RLS se apoyan
+  en la auditoría anterior (que sí revisó la base) y en el código. Ver la recomendación R10.
+</div>
+
+<h2>Resumen</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Severidad</th><th>Hallazgo</th><th>Estado</th></tr></thead>
+  <tbody>
+    <tr><td>H1</td><td><span class="tag high">Alta</span></td><td>Edge Functions sin límite de solicitudes</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H2</td><td><span class="tag high">Alta</span></td><td>Acaparamiento de inventario creando pedidos sin pagar en bucle</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H3</td><td><span class="tag med">Media</span></td><td>Calificación de 5 estrellas mostrada en productos y experiencias sin reseñas</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H4</td><td><span class="tag med">Media</span></td><td>Un vendedor podía reseñar sus propios productos</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H5</td><td><span class="tag med">Media</span></td><td>Anuncios pagados rotulados como “Destacado”</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H6</td><td><span class="tag med">Media</span></td><td>Llaves foráneas y consultas frecuentes sin índices</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H7</td><td><span class="tag low">Baja</span></td><td>Estrellas preseleccionadas en 5 al calificar</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H8</td><td><span class="tag low">Baja</span></td><td>“Acepto los términos” sin enlace a los términos</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H9</td><td><span class="tag low">Baja</span></td><td><code>notify-order</code> no validaba el formato del pedido</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>H10</td><td><span class="tag med">Media</span></td><td>Promesas falsas en el detalle del producto (envío en 48 h, empaques biodegradables, reforestación)</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R1</td><td><span class="tag med">Media</span></td><td>La verificación del productor no se revisa si cambia su documento o su organización</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R2</td><td><span class="tag med">Media</span></td><td>Cualquier usuario puede reseñar productos que no compró</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R3</td><td><span class="tag med">Media</span></td><td>Los pedidos sin pagar nunca se cancelan solos</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R4</td><td><span class="tag low">Baja</span></td><td>Configuración de Auth en el dashboard (contraseñas filtradas, MFA, límites)</td><td><span class="tag pend">Dashboard</span></td></tr>
+    <tr><td>R5</td><td><span class="tag low">Baja</span></td><td>CORS abierto si falta el secret <code>ALLOWED_ORIGINS</code></td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R6</td><td><span class="tag low">Baja</span></td><td>Eliminar la cuenta solo es posible por correo</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R7</td><td><span class="tag low">Baja</span></td><td>Vulnerabilidades en dependencias de desarrollo</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R8</td><td><span class="tag low">Baja</span></td><td><code>must_change_password</code> en metadatos editables por el usuario</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R9</td><td><span class="tag info">Info</span></td><td>Las vitrinas descargan todas las reseñas para calcular promedios</td><td><span class="tag ok">Corregido</span></td></tr>
+    <tr><td>R10</td><td><span class="tag info">Info</span></td><td>El esquema base y sus políticas RLS no están versionados</td><td><span class="tag pend">Dashboard</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Hallazgos corregidos</h2>
+
+<div class="card">
+  <div class="meta"><span class="id">H1</span><span class="tag high">Alta</span><span class="tag ok">Corregido</span></div>
+  <h3>Edge Functions sin límite de solicitudes</h3>
+  <p>Supabase no limita las invocaciones a Edge Functions. Con eso:</p>
+  <ul>
+    <li><code>notify-order</code> aceptaba intentos ilimitados de adivinar <code>NOTIFY_WEBHOOK_SECRET</code>, y con el secreto (o el webhook) se podía reenviar el mismo pedido sin fin. Cada envío es un WhatsApp pagado y llega al vendedor.</li>
+    <li><code>admin-users</code> consultaba Auth en cada llamada sin freno, y una sesión de administrador robada podía crear o borrar cuentas en masa.</li>
+  </ul>
+  <p><strong>Corrección.</strong> Contador en Postgres (<code>public.rate_limits</code> + <code>check_rate_limit</code>, solo ejecutable por <code>service_role</code>), compartido por todas las instancias de la función, y módulo <code>supabase/functions/_shared/rateLimit.ts</code>. Las funciones responden <code>429</code> con <code>Retry-After</code>.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Función</th><th>Clave</th><th>Límite</th><th>Momento</th></tr></thead>
+    <tbody>
+      <tr><td>admin-users</td><td>IP</td><td>60 / minuto</td><td>Antes de consultar Auth</td></tr>
+      <tr><td>admin-users</td><td>Administrador</td><td>30 / minuto</td><td>Después de validar el rol</td></tr>
+      <tr><td>admin-users</td><td>Administrador + acción</td><td>create_user 30/h · delete_user 30/h · set_temp_password 10/h</td><td>Después de validar el rol</td></tr>
+      <tr><td>notify-order</td><td>IP</td><td>60 / minuto</td><td>Antes de comparar el secreto</td></tr>
+      <tr><td>notify-order</td><td>Pedido</td><td>5 / hora</td><td>Después de validar el secreto</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="margin-top:12px">Si el contador falla (por ejemplo, la migración aún no se aplicó), la solicitud se permite y queda el error en los logs: un fallo del limitador no deja sin servicio a los administradores. Los contadores viejos se borran cada hora con pg_cron. Los límites son constantes al inicio de cada función.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H2</span><span class="tag high">Alta</span><span class="tag ok">Corregido</span></div>
+  <h3>Acaparamiento de inventario con pedidos sin pagar</h3>
+  <p><code>create_store_order</code> descuenta el stock al crear el pedido y, hasta R3, los pedidos sin pagar no se liberaban solos. Un usuario podía llamar la RPC en bucle y dejar “Agotado” el catálogo de un productor.</p>
+  <p><strong>Corrección.</strong> Máximo <strong>10 pedidos por hora y 30 por día</strong> por usuario, con un trigger en <code>orders</code> (<code>rate_limit_new_order</code>). Un pedido que falla no cuenta. El mensaje al usuario es “Demasiadas solicitudes. Intenta de nuevo en N minuto(s).”, y el checkout ya lo muestra. Con R3, el stock de los pedidos sin pagar vuelve al catálogo cuando vence el plazo.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H3</span><span class="tag med">Media</span><span class="tag ok">Corregido</span><span class="tag info">Patrón oscuro</span></div>
+  <h3>Calificación falsa de 5 estrellas</h3>
+  <p>La base crea cada producto y experiencia con <code>rating = 5</code>. El carrusel del inicio mostraba “⭐ 5” en productos sin ninguna reseña y los ordenaba por encima de productos reseñados con 4,8. El detalle de una experiencia mostraba “⭐ 5” y “5 (0 reseñas)”.</p>
+  <p><strong>Corrección.</strong> Sin reseñas se muestra “Nuevo” o “Sin reseñas aún”, y el promedio solo sale de reseñas reales (<code>HomeScreen</code>, <code>MarketplaceScreen</code>, <code>TourismScreen</code>).</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H4</span><span class="tag med">Media</span><span class="tag ok">Corregido</span></div>
+  <h3>Autorreseñas</h3>
+  <p>Nada impedía que el productor calificara su propio producto. Tampoco había un rango validado en la base para la calificación.</p>
+  <p><strong>Corrección.</strong> En la migración <code>20261026140000_review_integrity.sql</code>, el trigger <code>guard_product_review</code> bloquea las reseñas de productos propios y exige <code>user_id = auth.uid()</code>. También se agrega <code>check (rating between 1 and 5)</code>, marcado <code>NOT VALID</code> para no fallar si hay datos antiguos.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H5</span><span class="tag med">Media</span><span class="tag ok">Corregido</span><span class="tag info">Patrón oscuro</span></div>
+  <h3>Publicidad encubierta</h3>
+  <p>En el inicio los anuncios decían “PATROCINADO”. En Productos y Experiencias, los mismos anuncios (ventana flotante y lista) decían “Destacado” o “Experiencia Destacada”, una etiqueta que suena a recomendación de la plataforma. La Ley 1480 de 2011 exige que la publicidad sea identificable.</p>
+  <p><strong>Corrección.</strong> Ahora dicen “Patrocinado” o “Experiencia patrocinada”. El campo <code>outstanding</code>, que elige la plataforma, no cambia.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H6</span><span class="tag med">Media</span><span class="tag ok">Corregido</span><span class="tag info">Rendimiento</span></div>
+  <h3>Índices</h3>
+  <p>Postgres no indexa las llaves foráneas. Sin índices, “Mis pedidos”, la campana de notificaciones, las ventas del productor, las políticas RLS por usuario, la vista <code>public_profiles</code> y los borrados en cascada recorren tablas completas. Hoy no se nota, pero crece con cada pedido y notificación.</p>
+  <p><strong>Corrección.</strong> La migración <code>20261026130000_performance_indexes.sql</code> agrega hasta 36 índices, cada uno alineado con el filtro y el orden de una consulta real (por ejemplo <code>order_items (seller_id, created_at desc)</code> o <code>user_notifications (user_id, created_at desc)</code>). Como no se conocen los índices que ya existen en la base, la migración solo crea un índice si ningún índice completo de la tabla empieza por las mismas columnas, y omite tablas o columnas que no existan. Se puede ejecutar varias veces sin efecto adicional.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H7</span><span class="tag low">Baja</span><span class="tag ok">Corregido</span><span class="tag info">Patrón oscuro</span></div>
+  <h3>Calificación preseleccionada</h3>
+  <p>Los formularios de reseña (detalle del producto y panel del comprador) empezaban con 5 estrellas marcadas, lo que empuja las calificaciones hacia arriba. Ahora empiezan vacíos y piden elegir de 1 a 5.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H8</span><span class="tag low">Baja</span><span class="tag ok">Corregido</span><span class="tag info">Patrón oscuro</span></div>
+  <h3>Términos sin enlace</h3>
+  <p>En el registro, “términos de servicio” y “Política de privacidad” tenían estilo de enlace pero no llevaban a ninguna parte, así que se aceptaba algo que no se podía leer. Ahora abren <code>/terminos</code> y <code>/privacidad</code> en otra pestaña, sin perder el formulario.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H9</span><span class="tag low">Baja</span><span class="tag ok">Corregido</span></div>
+  <h3>Validación de entrada en notify-order</h3>
+  <p>El <code>order_id</code> se usaba sin validar. Ahora se exige un UUID antes de consultar la base.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">H10</span><span class="tag med">Media</span><span class="tag ok">Corregido</span><span class="tag info">Patrón oscuro</span></div>
+  <h3>Promesas falsas en el detalle del producto</h3>
+  <p>Este hallazgo apareció al corregir R2. Todos los productos mostraban el mismo texto fijo: “Realizamos envíos en 48 horas hábiles a todo el país”, “Empaques 100% biodegradables”, “Por cada compra contribuyes a la reforestación de 1m²” y una historia genérica del productor. Ninguno de esos textos sale de datos reales. El del envío contradice al checkout, donde el envío es “A convenir con el productor”, y los de empaques y reforestación son afirmaciones ambientales sin respaldo (greenwashing).</p>
+  <p><strong>Corrección.</strong> La pestaña “Envío” ahora dice lo mismo que el checkout, y “Origen y Productor” solo muestra datos reales (vendedor, categoría, certificado y disponibilidad).</p>
+</div>
+
+<h2>Pendientes de la primera revisión (R1–R10)</h2>
+<p>Ocho se resolvieron en código. R4 y R10 dependen del dashboard de Supabase y quedan con los pasos exactos.</p>
+
+<div class="card">
+  <div class="meta"><span class="id">R1</span><span class="tag med">Media</span><span class="tag ok">Corregido</span></div>
+  <h3>Identidad del productor verificado</h3>
+  <p>El trigger <code>protect_verified_producer_identity</code> impide que un productor verificado (RUT aprobado o verificación manual) cambie por su cuenta su tipo y número de documento o el nombre con el que publica: la organización o, si no tiene, su nombre y apellido. El mensaje le pide escribir a soporte. El superadmin sí puede hacer el cambio. El resto de los datos (teléfono, ubicación) se sigue editando normalmente.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R2</span><span class="tag med">Media</span><span class="tag ok">Corregido</span></div>
+  <h3>Reseñas con compra verificada</h3>
+  <p><code>guard_product_review</code> ahora exige que quien reseña tenga un ítem de ese producto en estado <em>Entregado</em> en uno de sus pedidos. Las reseñas que ya existían se conservan y se pueden editar. En el detalle del producto, quien no lo ha recibido ve “Solo quienes recibieron este producto pueden calificarlo” en lugar del formulario.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R3</span><span class="tag med">Media</span><span class="tag ok">Corregido</span></div>
+  <h3>Cancelación de pedidos sin pagar</h3>
+  <p>La nueva función <code>cancel_expired_unpaid_orders</code> corre cada hora con pg_cron (job <code>cancelar-pedidos-sin-pago</code>). Cancela los ítems en “Pendiente de pago” de pedidos que <strong>no</strong> son contraentrega, sin pago confirmado y más viejos que el plazo de su tienda. Al pasar a Cancelado, los triggers existentes devuelven el inventario y avisan. Se hizo una función nueva porque la definición de <code>cancel_unpaid_store_orders</code> no está en el repositorio y no se pudo confirmar que respete la contraentrega.</p>
+  <p>El plazo queda en <strong>48 horas</strong> en las tiendas que no tenían uno y se cambia en Superadmin → Tiendas. Un ítem que no se pueda cancelar (por ejemplo, porque falta la transición en el flujo de la tienda) se registra como aviso y no detiene a los demás.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R4</span><span class="tag low">Baja</span><span class="tag pend">Dashboard</span></div>
+  <h3>Autenticación</h3>
+  <p>Estas opciones solo existen en el dashboard. Cambiarlas desde el repositorio exige <code>supabase config push</code>, que sobrescribe toda la configuración de Auth (URLs, proveedores, plantillas), así que no se tocaron. En Supabase → Authentication:</p>
+  <ul>
+    <li><strong>Providers → Email</strong>: activar <em>Confirm email</em> y <em>Prevent use of leaked passwords</em>, con longitud mínima 8 (la misma que exige la app).</li>
+    <li><strong>Rate Limits</strong>: revisar los límites de inicio de sesión, registro, correos y verificación (los aplica Auth).</li>
+    <li><strong>Multi-Factor</strong>: activar TOTP y pedirlo a las cuentas de superadmin.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R5</span><span class="tag low">Baja</span><span class="tag ok">Corregido</span></div>
+  <h3>CORS</h3>
+  <p>El nuevo módulo <code>supabase/functions/_shared/cors.ts</code> lo usan <code>admin-users</code> y <code>delete-account</code>. Sin el secret <code>ALLOWED_ORIGINS</code> ya no responde <code>*</code>: acepta <code>https://www.saki5.com</code> y <code>https://saki5.com</code>, más las vistas previas de Azure Static Web Apps y <code>localhost</code>. El secret sigue teniendo prioridad si se configura.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R6</span><span class="tag low">Baja</span><span class="tag ok">Corregido</span></div>
+  <h3>Eliminar mi cuenta</h3>
+  <p>Hay un botón “Eliminar mi cuenta” en el panel del comprador y en el del productor/anfitrión, que pide escribir ELIMINAR. La nueva Edge Function <code>delete-account</code> funciona así:</p>
+  <ul>
+    <li>Rechaza las cuentas de administrador y también la solicitud si hay pedidos en curso, como comprador o como vendedor.</li>
+    <li>Borra publicaciones con sus fotos, favoritos, reseñas, notificaciones, actividad, solicitudes y documentos de productor.</li>
+    <li>Borra la cuenta. Si hay pedidos terminados, que se conservan por obligaciones contables, anonimiza el perfil y los datos de entrega y desactiva la cuenta (soft delete de Auth).</li>
+  </ul>
+  <p>Tiene rate limit de 5 intentos por hora por usuario. La Política de privacidad ya menciona la opción.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R7</span><span class="tag low">Baja</span><span class="tag ok">Corregido</span></div>
+  <h3>Dependencias</h3>
+  <p>Se actualizaron <code>vite</code> 8.2.2 → 8.3.5, <code>vitest</code> 3.2.7 → 4.1.12, <code>sharp</code> → ≥0.35.5 y <code>source-map-js</code> (transitiva). <code>pnpm audit</code> da 0 vulnerabilidades, y las 48 pruebas y el build pasan. <code>package-lock.json</code> no se regeneró porque npm falla con la instalación de pnpm. El CI usa pnpm, así que ese archivo está desactualizado: conviene borrarlo para evitar confusiones.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R8</span><span class="tag low">Baja</span><span class="tag ok">Corregido</span></div>
+  <h3>Cambio de contraseña obligatorio</h3>
+  <p>La marca vive en <code>public.password_change_required</code>, una tabla sin acceso desde el navegador, junto con el hash de la contraseña temporal. <code>admin-users</code> la registra al crear un usuario y al asignar una contraseña temporal. <code>my_password_change_required()</code> devuelve verdadero mientras el hash no cambie, y borra la marca cuando cambia. Editar <code>user_metadata</code> ya no evita el cambio. Las cuentas que hoy tienen la marca en sus metadatos se migran.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R9</span><span class="tag info">Info</span><span class="tag ok">Corregido</span></div>
+  <h3>Promedio de reseñas en la base</h3>
+  <p>La vista <code>product_rating_stats</code> (<code>security_invoker</code>) devuelve promedio y cantidad por producto. El inicio y las vitrinas la usan con <code>src/lib/ratings.ts</code> y descargan una fila por producto reseñado en lugar de todas las reseñas. Mientras la migración no esté aplicada, la app calcula como antes.</p>
+</div>
+
+<div class="card">
+  <div class="meta"><span class="id">R10</span><span class="tag info">Info</span><span class="tag pend">Dashboard</span></div>
+  <h3>Esquema base y revisión de la base</h3>
+  <p>Versionar el esquema exige conectarse a la base con la CLI, y esta sesión no tiene esas credenciales. Para hacerlo desde tu equipo:</p>
+  <pre><code>npx supabase db dump --linked --schema public -f supabase/schema/baseline.sql</code></pre>
+  <p>Conviene guardarlo en <code>supabase/schema/</code> y no en <code>migrations/</code>, para que <code>db push</code> no intente reaplicarlo. Se agregó <code>supabase/scripts/verificar-seguridad.sql</code>, una revisión de solo lectura para pegar en el SQL Editor. Lista:</p>
+  <ul>
+    <li>tablas sin RLS y políticas abiertas de escritura;</li>
+    <li>funciones <code>SECURITY DEFINER</code> sin <code>search_path</code> o ejecutables por <code>anon</code>;</li>
+    <li>vistas que saltan RLS;</li>
+    <li>llaves foráneas sin índice e índices duplicados;</li>
+    <li>los jobs de pg_cron.</li>
+  </ul>
+</div>
+
+<h2>Revisado sin hallazgos nuevos</h2>
+<ul>
+  <li><strong>Secretos</strong>: no hay llaves en el repositorio. <code>.env*</code> está en <code>.gitignore</code>, el navegador solo recibe la URL y la llave <code>anon</code>, y la service role vive en las Edge Functions.</li>
+  <li><strong>admin-users</strong>: rol y tienda se leen de la base, no del cuerpo. El admin de tienda queda limitado a su tienda. Hay validación de correo, contraseña, documento y UUID, y los errores internos no se devuelven al cliente.</li>
+  <li><strong>notify-order</strong>: secreto comparado en tiempo constante. Los parámetros de la plantilla se normalizan y se recortan.</li>
+  <li><strong>Inicio con Google</strong>: ID token con nonce (hash SHA-256 a Google, valor original a Supabase).</li>
+  <li><strong>Frontend</strong>: no usa <code>dangerouslySetInnerHTML</code>, <code>eval</code> ni redirecciones con datos del usuario. Los enlaces externos usan <code>noopener</code>, los documentos privados se abren con URL firmada de 5 minutos, y las imágenes se suben a la carpeta del usuario con extensión tomada del tipo MIME.</li>
+  <li><strong>Hosting</strong>: CSP estricta (<code>script-src 'self'</code> más Google Identity, <code>frame-ancestors 'none'</code>, <code>object-src 'none'</code>), HSTS, <code>nosniff</code>, <code>X-Frame-Options</code>, <code>Referrer-Policy</code> y <code>Permissions-Policy</code>. <code>style-src 'unsafe-inline'</code> es necesario por los estilos en línea de React y tiene bajo riesgo sin scripts en línea.</li>
+  <li><strong>CI</strong>: permisos mínimos (<code>contents: read</code>), y typecheck, lint, test y build antes de desplegar.</li>
+  <li><strong>Checkout</strong>: sin costos ocultos. El envío se muestra como “A convenir con el productor” y el total dice “sin envío”.</li>
+</ul>
+
+<h2>Sobre “patrones oscuros” en el código</h2>
+<p>Este informe trata “patrones oscuros” como diseño engañoso de la interfaz (H3, H5, H7, H8, H10 y R6). Si se refería a <em>anti-patrones de código</em>, estos son los más relevantes, sin cambios en esta rama:</p>
+<ul>
+  <li>Varias migraciones editan <code>create_store_order</code> con <code>replace</code> o <code>regexp_replace</code> sobre su definición. Es frágil y dificulta saber cuál es la versión vigente. Conviene reescribirla completa una vez.</li>
+  <li>El stock y la capacidad se guardan como texto (<code>"45 unidades"</code>, <code>"12 personas"</code>) y se convierten con expresiones regulares. Un entero evitaría errores de inventario.</li>
+  <li>Hay componentes muy grandes (<code>SuperAdminScreen</code> con 2.196 líneas, <code>MarketplaceScreen</code> y <code>TourismScreen</code> con unas 1.370) y estilos en línea repetidos.</li>
+  <li>Varios errores de Supabase solo se registran en consola y la pantalla queda vacía sin aviso.</li>
+</ul>
+
+<h2>Cómo aplicar</h2>
+<ol>
+  <li>Migraciones (en este orden, ya incluido en el nombre):
+<pre><code>npx supabase migration list --linked      # deben faltar de 20261026120000 a 20261026150000 (4 migraciones)
+npx supabase db push --linked --dry-run
+npx supabase db push --linked</code></pre></li>
+  <li>Edge Functions (la carpeta <code>_shared</code> se empaqueta sola):
+<pre><code>npx supabase functions deploy admin-users
+npx supabase functions deploy notify-order
+npx supabase functions deploy delete-account</code></pre></li>
+  <li>Frontend: se despliega con el flujo normal (rama → <code>dev</code> → <code>main</code>).</li>
+  <li>Dashboard: R4 y R10. Después, ejecutar <code>supabase/scripts/verificar-seguridad.sql</code> en el SQL Editor.</li>
+</ol>
+
+<h2>Verificación</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Prueba</th><th>Resultado</th></tr></thead>
+  <tbody>
+    <tr><td>Migraciones sobre un esquema equivalente en Postgres 16 local</td><td>Aplican sin errores y se pueden reaplicar</td></tr>
+    <tr><td>R1: productor verificado cambia la organización o el documento / el teléfono</td><td>Bloqueado / permitido</td></tr>
+    <tr><td>R2: reseña sin compra / con ítem Entregado</td><td>Bloqueada / permitida</td></tr>
+    <tr><td>R3: transferencia de hace 3 días sin pagar / contraentrega pendiente</td><td>Cancelada / se mantiene</td></tr>
+    <tr><td>R8: marca con la contraseña temporal / después de cambiarla</td><td>Obligatorio / se apaga y se borra la marca</td></tr>
+    <tr><td>R9: <code>product_rating_stats</code></td><td>Promedio y cantidad correctos</td></tr>
+    <tr><td><code>check_rate_limit('k', 2, 60)</code> tres veces</td><td>Permitida, permitida, rechazada con <code>retry_after</code></td></tr>
+    <tr><td>12 pedidos seguidos del mismo usuario</td><td>10 creados, 2 rechazados (“Demasiadas solicitudes…”)</td></tr>
+    <tr><td>Pedido con el carrito vacío repetido 11 veces</td><td>No consume el cupo (se revierte con el error)</td></tr>
+    <tr><td><code>authenticated</code> llama <code>check_rate_limit</code> / <code>anon</code> lee <code>rate_limits</code></td><td>Permiso denegado en ambos casos</td></tr>
+    <tr><td>Índice ya cubierto por un <code>unique</code> existente (<code>product_reviews</code>)</td><td>Se omite (sin duplicados)</td></tr>
+    <tr><td>Productor reseña su producto / reseña a nombre de otro</td><td>Bloqueado / bloqueado. Un comprador sí puede reseñar</td></tr>
+    <tr><td><code>deno check</code> de las tres Edge Functions</td><td>Sin errores de tipos</td></tr>
+    <tr><td><code>pnpm typecheck</code>, <code>pnpm lint</code>, <code>pnpm test</code>, <code>pnpm build</code>, <code>pnpm audit</code></td><td>OK: 48 pruebas, mismas 19 advertencias de lint que <code>dev</code>, 0 vulnerabilidades</td></tr>
+  </tbody>
+</table>
+</div>
+
+<footer>Archivos de esta rama: 4 migraciones (de <code>20261026120000</code> a <code>20261026150000</code>), Edge Functions <code>admin-users</code>, <code>notify-order</code> y <code>delete-account</code> (nueva), módulos <code>_shared/rateLimit.ts</code> y <code>_shared/cors.ts</code>, <code>supabase/scripts/verificar-seguridad.sql</code>, pantallas y componentes en <code>src/</code>, y dependencias en <code>package.json</code> y <code>pnpm-lock.yaml</code>.</footer>
+
+</main>
+</body>
+</html>

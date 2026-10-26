@@ -14,29 +14,24 @@
 //     con can_store_admin_manage). No puede asignar contraseñas temporales.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-
-// Orígenes permitidos (secret ALLOWED_ORIGINS, separados por coma). Sin configurar: cualquiera.
-const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean)
-
-function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('Origin') ?? ''
-  const allowOrigin = ALLOWED_ORIGINS.length === 0 ? '*' : ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
-  return {
-    'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    Vary: 'Origin',
-  }
-}
+import { checkRateLimits, clientIp, tooManyRequests, type AdminClient } from '../_shared/rateLimit.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
 const USER_TYPES = ['asociacion', 'turismo', 'comprador', 'admin', 'admin_tienda']
 // Roles que pertenecen a una tienda (profiles.store); el resto queda en 'campo'
 const STORE_ROLES = ['asociacion', 'admin_tienda']
 const MIN_PASSWORD_LENGTH = 8
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Rate limit (solicitudes por ventana). Holgado para el uso normal de un panel de administración.
+const IP_LIMIT = { max: 60, windowSeconds: 60 }
+const CALLER_LIMIT = { max: 30, windowSeconds: 60 }
+// Por acción y por administrador: frena la creación o el borrado masivo con una sesión robada
+const ACTION_LIMITS: Record<string, { max: number; windowSeconds: number }> = {
+  create_user: { max: 30, windowSeconds: 3600 },
+  delete_user: { max: 30, windowSeconds: 3600 },
+  set_temp_password: { max: 10, windowSeconds: 3600 },
+}
 
 function validPassword(password: unknown): password is string {
   return typeof password === 'string'
@@ -76,6 +71,12 @@ Deno.serve(async (req) => {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
+  const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+
+  // 0. Rate limit por IP, antes de consultar Auth
+  const ipLimit = await checkRateLimits(admin, [{ key: `admin-users:ip:${clientIp(req)}`, ...IP_LIMIT }])
+  if (!ipLimit.allowed) return tooManyRequests(ipLimit.retryAfter, cors)
+
   // 1. Identificar a quien llama a partir de su sesión
   const authHeader = req.headers.get('Authorization') ?? ''
   const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } })
@@ -83,7 +84,6 @@ Deno.serve(async (req) => {
   if (callerError || !caller) return json({ error: 'Sesión inválida. Vuelve a iniciar sesión.' }, 401)
 
   // 2. Rol y tienda de quien llama (con la service key, sin depender de RLS)
-  const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
   const { data: callerProfile } = await admin.from('profiles').select('user_type, store').eq('id', caller.id).single()
   const isSuperAdmin = callerProfile?.user_type === 'admin'
   const isStoreAdmin = callerProfile?.user_type === 'admin_tienda' && !!callerProfile?.store
@@ -96,8 +96,16 @@ Deno.serve(async (req) => {
     return json({ error: 'Solicitud inválida.' }, 400)
   }
 
+  // 3. Rate limit por administrador y por acción
+  const action = typeof body.action === 'string' ? body.action : ''
+  const callerLimit = await checkRateLimits(admin, [
+    { key: `admin-users:user:${caller.id}`, ...CALLER_LIMIT },
+    ...(ACTION_LIMITS[action] ? [{ key: `admin-users:${action}:${caller.id}`, ...ACTION_LIMITS[action] }] : []),
+  ])
+  if (!callerLimit.allowed) return tooManyRequests(callerLimit.retryAfter, cors)
+
   try {
-    switch (body.action) {
+    switch (action) {
       // ─── Crear usuario ────────────────────────────────────────────────────
       case 'create_user': {
         const email = clean(body.email)?.toLowerCase()
@@ -168,6 +176,9 @@ Deno.serve(async (req) => {
           return json({ error: 'No se pudo crear el perfil del usuario.' }, 400)
         }
 
+        // La marca que hace cumplir el cambio vive en la base (user_metadata la puede editar el usuario)
+        if (body.must_change_password !== false) await markPasswordChange(admin, created.user.id)
+
         return json({ ok: true, user_id: created.user.id })
       }
 
@@ -215,6 +226,7 @@ Deno.serve(async (req) => {
           console.error('admin-users set_temp_password:', error.message)
           return json({ error: 'No se pudo asignar la contraseña.' }, 400)
         }
+        await markPasswordChange(admin, userId)
         return json({ ok: true })
       }
 
@@ -226,3 +238,10 @@ Deno.serve(async (req) => {
     return json({ error: 'Error inesperado en el servidor.' }, 500)
   }
 })
+
+// Registra que la cuenta tiene una contraseña temporal (public.password_change_required).
+// Si falla, la marca de user_metadata sigue funcionando como antes.
+async function markPasswordChange(admin: AdminClient, userId: string) {
+  const { error } = await admin.rpc('mark_password_change_required', { p_user: userId })
+  if (error) console.error('admin-users mark_password_change_required:', error.message)
+}

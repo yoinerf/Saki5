@@ -5,6 +5,7 @@ import LocationFields from '../components/LocationFields'
 import DocumentFields from '../components/DocumentFields'
 import GoogleSignInButton, { AuthDivider } from '../components/GoogleSignInButton'
 import LegalNotice from '../components/LegalNotice'
+import { LEGAL_PATHS } from '../lib/legal'
 import { normalizeDocumentNumber, validateDocument } from '../lib/identity'
 
 // Estilos de los campos del formulario (los selects de ubicación y documento usan los mismos)
@@ -687,9 +688,10 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
                       cursor: 'pointer',
                     }}
                   >
+                    {/* Enlaces reales (en otra pestaña, para no perder el formulario): se acepta lo que se puede leer */}
                     Acepto los{' '}
-                    <span style={{ color: '#9B4728', fontWeight: 700 }}>términos de servicio</span> y la{' '}
-                    <span style={{ color: '#9B4728', fontWeight: 700 }}>Política de privacidad</span>
+                    <a href={LEGAL_PATHS.terms} target="_blank" rel="noopener" style={{ color: '#9B4728', fontWeight: 700, textDecoration: 'underline' }}>términos de servicio</a> y la{' '}
+                    <a href={LEGAL_PATHS.privacy} target="_blank" rel="noopener" style={{ color: '#9B4728', fontWeight: 700, textDecoration: 'underline' }}>Política de privacidad</a>
                   </label>
                 </div>
 
