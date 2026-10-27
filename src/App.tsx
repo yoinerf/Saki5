@@ -5,8 +5,9 @@ import { cartItemKey, type CartItem } from './lib/catalog'
 import { supabase, authRedirectInfo } from './lib/supabase'
 import { MAIN_STORE, cartKey, isMainStore, type StoreId } from './lib/stores'
 import { useStores } from './lib/storesContext'
-import { pathForTab, routeFromPath } from './lib/routes'
+import { isKnownPath, pathForTab, routeFromPath } from './lib/routes'
 import { legalPageFromPath } from './lib/legal'
+import { metaForTab, setPageMeta } from './lib/seo'
 import { AppNavigationContext } from './lib/navigation'
 import type { Tab, UserRole } from './lib/types'
 import { useAuth } from './lib/auth'
@@ -28,6 +29,7 @@ const StoreAdminScreen = lazy(() => import('./screens/StoreAdminScreen'))
 const AboutScreen = lazy(() => import('./screens/AboutScreen'))
 const CompleteProfileScreen = lazy(() => import('./screens/CompleteProfileScreen'))
 const LegalScreen = lazy(() => import('./screens/LegalScreen'))
+const NotFoundScreen = lazy(() => import('./screens/NotFoundScreen'))
 
 function ScreenLoader() {
   return (
@@ -61,7 +63,7 @@ const getVisibleTabs = (role: UserRole | undefined, store: StoreId, hasAlliedSto
 // Espera a conocer la sesión y las tiendas: la ruta inicial depende de ambas
 export default function App() {
   const { loading: checkingSession } = useAuth()
-  const { loading: loadingStores } = useStores()
+  const { loading: loadingStores, allStores } = useStores()
 
   // Privacidad y condiciones: públicas, sin esperar sesión ni tiendas
   const legalPage = legalPageFromPath(window.location.pathname)
@@ -84,6 +86,15 @@ export default function App() {
           <p style={{ fontSize: 15, fontWeight: 600 }}>Cargando...</p>
         </div>
       </div>
+    )
+  }
+
+  // Dirección que no existe: página 404 (sin indexar) en lugar del inicio
+  if (!isKnownPath(window.location.pathname, allStores)) {
+    return (
+      <Suspense fallback={<ScreenLoader />}>
+        <NotFoundScreen />
+      </Suspense>
     )
   }
 
@@ -209,9 +220,11 @@ function AppContent() {
     : activeTab === 'profile' ? panelStore
     : MAIN_STORE
 
+  // Título, descripción y URL canónica de la pantalla (lib/seo)
   useEffect(() => {
-    document.title = getStore(viewStore).name
-  }, [viewStore, getStore])
+    const config = getStore(viewStore)
+    setPageMeta(metaForTab(activeTab, config.name, config.description ?? config.tagline, pathForTab(activeTab, viewStore, allStores)))
+  }, [activeTab, viewStore, getStore, allStores])
 
   // La pestaña actual queda en la URL (ver lib/routes)
   useEffect(() => {

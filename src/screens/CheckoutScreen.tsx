@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import AuthRequiredModal from '../components/AuthRequiredModal'
 import { MAIN_STORE, isMainStore, type StoreId, type StorePaymentMethod } from '../lib/stores'
 import { useStores } from '../lib/storesContext'
+import { LIMITS, cleanShipping, shippingError } from '../lib/validation'
 
 interface CheckoutScreenProps {
   items: CartItem[]
@@ -156,6 +157,13 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
         setErrorMessage('Por favor completa los campos obligatorios: Nombre, Teléfono y Dirección de entrega.')
         return
       }
+      const shipping = cleanShipping(addressForm)
+      const invalid = shippingError(shipping)
+      if (invalid) {
+        setErrorMessage(invalid)
+        return
+      }
+      setAddressForm({ ...addressForm, ...shipping })
       setCurrentStep(3)
     } else if (currentStep === 3) {
       // Paso 3 -> Finalizar pedido / Proceder al pago
@@ -189,7 +197,8 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
         // Productos con variantes: la combinación elegida (su stock lo descuenta la base)
         ...(variant ? { variant_id: variant.id } : {}),
       })),
-      p_shipping: addressForm,
+      // Limpios otra vez: la base también los valida y recorta
+      p_shipping: cleanShipping(addressForm),
       p_shipping_fee: shippingFee,
     })
 
@@ -450,6 +459,7 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
                           <input
                             type="text"
                             value={addressForm.fullName}
+                            maxLength={LIMITS.orgName}
                             onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
                             placeholder="Ej: Juan Pérez"
                             className="w-full bg-[#F9F6F0] border border-[#E8DED0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#205134]"
@@ -461,6 +471,7 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
                           <input
                             type="tel"
                             value={addressForm.phone}
+                            maxLength={10}
                             onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
                             placeholder="Ej: 3101234567"
                             className="w-full bg-[#F9F6F0] border border-[#E8DED0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#205134]"
@@ -472,6 +483,7 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
                           <input
                             type="text"
                             value={addressForm.department}
+                            maxLength={LIMITS.place}
                             onChange={(e) => setAddressForm({ ...addressForm, department: e.target.value })}
                             placeholder="Ej: Cundinamarca"
                             className="w-full bg-[#F9F6F0] border border-[#E8DED0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#205134]"
@@ -483,6 +495,7 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
                           <input
                             type="text"
                             value={addressForm.municipality}
+                            maxLength={LIMITS.place}
                             onChange={(e) => setAddressForm({ ...addressForm, municipality: e.target.value })}
                             placeholder="Ej: Fusagasugá"
                             className="w-full bg-[#F9F6F0] border border-[#E8DED0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#205134]"
@@ -494,6 +507,7 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
                           <input
                             type="text"
                             value={addressForm.address}
+                            maxLength={LIMITS.address}
                             onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
                             placeholder="Ej: Calle 10 # 4-15 Finca La Esperanza"
                             className="w-full bg-[#F9F6F0] border border-[#E8DED0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#205134]"
@@ -505,6 +519,7 @@ export default function CheckoutScreen({ items, onItemsChange, onBack, onRequire
                           <textarea
                             rows={3}
                             value={addressForm.deliveryNotes}
+                            maxLength={LIMITS.deliveryNotes}
                             onChange={(e) => setAddressForm({ ...addressForm, deliveryNotes: e.target.value })}
                             placeholder="Ej: Dejar en la portería o llamar al llegar."
                             className="w-full bg-[#F9F6F0] border border-[#E8DED0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#205134]"

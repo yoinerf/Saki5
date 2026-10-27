@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { LIMITS, cleanShipping, personNameError, phoneError, textError } from '../lib/validation'
 
 export interface ExperienceReservationModalProps {
   open: boolean
@@ -35,7 +36,8 @@ export default function ExperienceReservationModal({
   const [loadingUser, setLoadingUser] = useState(true)
 
   // Formulario de reserva
-  const todayStr = new Date().toISOString().split('T')[0]
+  // Fecha local (en-CA = AAAA-MM-DD): con toISOString, después de las 7 p. m. en Colombia ya sería mañana
+  const todayStr = new Date().toLocaleDateString('en-CA')
   const [reservationDate, setReservationDate] = useState(initialDate || todayStr)
   const [guests, setGuests] = useState(initialGuests)
   const [fullName, setFullName] = useState('')
@@ -125,6 +127,24 @@ export default function ExperienceReservationModal({
       setErrorMessage('Por favor selecciona la fecha prevista para la experiencia.')
       return
     }
+    // El campo de fecha tiene min, pero se puede escribir a mano: la fecha debe ser de hoy en adelante y de este año o el próximo
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(reservationDate) || reservationDate < todayStr || Number(reservationDate.slice(0, 4)) > new Date().getFullYear() + 1) {
+      setErrorMessage('Selecciona una fecha válida, de hoy en adelante.')
+      return
+    }
+    if (!Number.isInteger(guests) || guests < 1 || guests > maxCapacity) {
+      setErrorMessage(`El número de personas debe estar entre 1 y ${maxCapacity}.`)
+      return
+    }
+    const contact = cleanShipping({ fullName, phone, department: 'Presencial', municipality: experience.host, address: 'Reserva', deliveryNotes: notes })
+    const invalid = personNameError('Nombre del titular', contact.fullName) ?? phoneError(contact.phone, true, 'Teléfono') ?? textError('Notas', contact.deliveryNotes, { max: LIMITS.deliveryNotes })
+    if (invalid) {
+      setErrorMessage(invalid)
+      return
+    }
+    setFullName(contact.fullName)
+    setPhone(contact.phone)
+    setNotes(contact.deliveryNotes)
     setStep('payment')
   }
 
@@ -535,6 +555,7 @@ export default function ExperienceReservationModal({
                     type="text"
                     placeholder="Ej: Laura Gómez"
                     value={fullName}
+                    maxLength={LIMITS.personName * 2}
                     onChange={(e) => setFullName(e.target.value)}
                     style={{
                       width: '100%',
@@ -567,6 +588,7 @@ export default function ExperienceReservationModal({
                       type="tel"
                       placeholder="Ej: 310 123 4567"
                       value={phone}
+                    maxLength={10}
                       onChange={(e) => setPhone(e.target.value)}
                       style={{
                         width: '100%',
@@ -628,6 +650,7 @@ export default function ExperienceReservationModal({
                   <textarea
                     placeholder="Alergias alimentarias, niños, adultos mayores, requerimientos de transporte..."
                     value={notes}
+                    maxLength={LIMITS.deliveryNotes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
                     style={{

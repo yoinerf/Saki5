@@ -7,10 +7,54 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SAKI5</title>
+  <title>SAKI5 · El Campo Nos Une</title>
+  <!-- Valores del inicio. Al navegar, src/lib/seo.ts los actualiza para cada pantalla. -->
+  <meta name="description" content="Conectamos productores campesinos y turismo comunitario con quienes buscan lo nuestro. Compra productos del campo colombiano y reserva experiencias rurales." />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#205134" />
+  <link rel="canonical" href="https://www.saki5.com/" />
+
+  <!-- Vista previa al compartir (WhatsApp, Facebook, X): no ejecutan JavaScript, solo leen esto -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="SAKI5 · El Campo Nos Une" />
+  <meta property="og:locale" content="es_CO" />
+  <meta property="og:title" content="SAKI5 · El Campo Nos Une" />
+  <meta property="og:description" content="Conectamos productores campesinos y turismo comunitario con quienes buscan lo nuestro." />
+  <meta property="og:url" content="https://www.saki5.com/" />
+  <meta property="og:image" content="https://www.saki5.com/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://www.saki5.com/og-image.png" />
+
+  <!-- Datos estructurados (schema.org) para buscadores -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.saki5.com/#organizacion",
+          "name": "El Campo Nos Une",
+          "alternateName": "SAKI5",
+          "url": "https://www.saki5.com/",
+          "logo": "https://www.saki5.com/favicon-192.png",
+          "email": "contacto@saki5.com",
+          "areaServed": "CO"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.saki5.com/#sitio",
+          "name": "SAKI5 · El Campo Nos Une",
+          "url": "https://www.saki5.com/",
+          "inLanguage": "es-CO",
+          "publisher": { "@id": "https://www.saki5.com/#organizacion" }
+        }
+      ]
+    }
+  </script>
 </head>
 
 <body>
+  <noscript>SAKI5 · El Campo Nos Une: productos del campo colombiano y turismo comunitario. Activa JavaScript para usar el sitio.</noscript>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

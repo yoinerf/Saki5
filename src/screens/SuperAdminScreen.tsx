@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { adminCreateUser, adminDeleteUser } from '../lib/adminUsers'
 import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
+import { LIMITS, cleanLine, isValidEmail, profileFieldsError, textError } from '../lib/validation'
 import {
   toColombiaInputString,
   fromColombiaInputToISO,
@@ -354,8 +356,15 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
 
   const handleCreateUser = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!newUserData.first_name.trim()) {
-      showToast('⚠️ Por favor ingresa el nombre')
+    const cleanedNew = {
+      first_name: cleanLine(newUserData.first_name),
+      last_name: cleanLine(newUserData.last_name),
+      org_name: cleanLine(newUserData.org_name),
+      phone: onlyPhoneDigits(newUserData.phone),
+    }
+    const newUserError = profileFieldsError(cleanedNew)
+    if (newUserError) {
+      showToast('⚠️ ' + newUserError)
       return
     }
     const docError = validateDocument(newUserData.document_type, newUserData.document_number)
@@ -371,6 +380,10 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
       showToast('⚠️ Por favor ingresa correo y contraseña')
       return
     }
+    if (!isValidEmail(newUserData.email.trim().toLowerCase())) {
+      showToast('⚠️ Ingresa un correo válido')
+      return
+    }
     const pw = newUserData.password.trim()
     if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) {
       showToast('⚠️ La contraseña debe tener al menos 8 caracteres, con letras y números')
@@ -381,12 +394,9 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
     try {
       // Edge Function: crea el usuario en Auth + su perfil. Deberá cambiar la contraseña al primer ingreso.
       const result = await adminCreateUser({
-        email: newUserData.email.trim(),
+        email: newUserData.email.trim().toLowerCase(),
         password: pw,
-        first_name: newUserData.first_name.trim(),
-        last_name: newUserData.last_name.trim(),
-        org_name: newUserData.org_name.trim(),
-        phone: onlyPhoneDigits(newUserData.phone),
+        ...cleanedNew,
         user_type: newUserData.user_type,
         store: STORE_ROLES.includes(newUserData.user_type) ? newUserData.store : 'campo',
         department: newUserData.department,
@@ -536,6 +546,17 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
 
   const handleSaveUser = async () => {
     if (!userEditModal) return
+    const cleanedUser = {
+      first_name: cleanLine(userEditModal.first_name),
+      last_name: cleanLine(userEditModal.last_name),
+      org_name: cleanLine(userEditModal.org_name),
+      phone: onlyPhoneDigits(userEditModal.phone || ''),
+    }
+    const userError = profileFieldsError(cleanedUser)
+    if (userError) {
+      showToast('⚠️ ' + userError)
+      return
+    }
     const docError = validateOptionalDocument(userEditModal.document_type ?? '', userEditModal.document_number ?? '')
     if (docError) {
       showToast('⚠️ ' + docError)
@@ -547,10 +568,10 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
     }
     setUserSaving(true)
     const { error } = await supabase.from('profiles').update({
-      first_name: userEditModal.first_name,
-      last_name: userEditModal.last_name,
-      org_name: userEditModal.org_name,
-      phone: onlyPhoneDigits(userEditModal.phone || "") || null,
+      first_name: cleanedUser.first_name,
+      last_name: cleanedUser.last_name,
+      org_name: cleanedUser.org_name || null,
+      phone: cleanedUser.phone || null,
       user_type: userEditModal.user_type,
       store: STORE_ROLES.includes(userEditModal.user_type) ? (userEditModal.store ?? 'campo') : 'campo',
       department: userEditModal.department || null,
@@ -560,9 +581,7 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
 
     if (!error) {
       // Sincronizar nombre en productos y experiencias del usuario editado
-      const displayName = userEditModal.org_name?.trim()
-        || `${userEditModal.first_name ?? ''} ${userEditModal.last_name ?? ''}`.trim()
-        || 'Productor'
+      const displayName = cleanedUser.org_name || `${cleanedUser.first_name} ${cleanedUser.last_name}`.trim() || 'Productor'
       await Promise.all([
         supabase.from('products').update({ producer: displayName }).eq('producer_id', userEditModal.id),
         supabase.from('experiences').update({ host: displayName }).eq('host_id', userEditModal.id),
@@ -598,15 +617,28 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
 
   const handleSaveAd = async () => {
     if (!adModal) return
+    const adTitle = cleanLine(adModal.title)
+    const titleError = textError('Título', adTitle, { max: LIMITS.title })
+    if (titleError) { showToast('⚠️ ' + titleError); return }
+    const startsAt = fromColombiaInputToISO(adModal.starts_at || '')
+    const endsAt = fromColombiaInputToISO(adModal.ends_at || '')
+    if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
+      showToast('⚠️ La fecha de fin debe ser posterior a la de inicio')
+      return
+    }
+    if (adModal.type === 'product' ? !adModal.product_id : !adModal.experience_id) {
+      showToast('⚠️ Elige el producto o la experiencia que se anuncia')
+      return
+    }
     setAdSaving(true)
     // Se excluye link_url: el anuncio redirige directamente al producto o experiencia
     // Se guardan las fechas siempre con la zona horaria de Colombia (-05:00)
     const payload: TableInsert<'advertisements'> = {
       type: adModal.type || 'product',
-      title: adModal.title?.trim() || '',
+      title: adTitle,
       image_url: adModal.image_url || null,
-      starts_at: fromColombiaInputToISO(adModal.starts_at || ''),
-      ends_at: fromColombiaInputToISO(adModal.ends_at || ''),
+      starts_at: startsAt,
+      ends_at: endsAt,
       active: adModal.active ?? true,
       product_id: adModal.type === 'product' ? adModal.product_id || null : null,
       experience_id: adModal.type === 'experience' ? adModal.experience_id || null : null,
@@ -929,9 +961,7 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
           <button
             type="button"
             onClick={async () => {
-              clearPromoSession()
-              await supabase.auth.signOut()
-              window.location.href = '/'
+              await signOutUser('/')
             }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', padding: 6 }}
             className="hover:text-white"

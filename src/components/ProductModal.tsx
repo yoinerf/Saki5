@@ -6,6 +6,7 @@ import VariantEditor from './VariantEditor'
 import { confirmDialog } from './ConfirmDialog'
 import { deleteProductImage, removeStoredFiles, uniquePaths } from '../lib/storageCleanup'
 import { DEFAULT_UNIT, UNITS, UNIT_GROUPS, normalizeUnit } from '../lib/units'
+import { LIMITS, cleanLine, cleanMultiline, integerError, priceError, textError } from '../lib/validation'
 
 /** Producto existente con el que se precarga el formulario (filas de products o vistas de las pantallas) */
 export interface ProductInitialData {
@@ -127,6 +128,7 @@ export default function ProductModal({
   const [existingImg, setExistingImg] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [formError, setFormError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   // Imágenes ya guardadas del producto (se pueden borrar: fila y archivo)
   const [savedImages, setSavedImages] = useState<SavedImageRow[]>([])
@@ -230,6 +232,7 @@ export default function ProductModal({
       }
       setImages([])
       setUploadError('')
+      setFormError('')
     }
   }, [isOpen, initialData, categories, producers])
 
@@ -315,8 +318,15 @@ export default function ProductModal({
   }
 
   const handleSave = async () => {
-    // Con variantes el precio va en cada variante; sin ellas es obligatorio el general
-    if (!form.title.trim() || (!variantsEnabled && !form.price)) return
+    // Con variantes el precio y el stock van en cada variante; sin ellas son obligatorios los generales
+    const title = cleanLine(form.title)
+    const description = cleanMultiline(form.description)
+    const fieldsError =
+      textError('Nombre del producto', title, { max: LIMITS.title, required: true }) ??
+      (variantsEnabled ? null : priceError(form.price) ?? integerError(form.stockNum, 'Cantidad en stock')) ??
+      textError('Descripción', description, { max: LIMITS.description })
+    setFormError(fieldsError ?? '')
+    if (fieldsError) return
     if (images.some(i => i.uploading)) { setUploadError('Espera a que terminen de subir las imágenes'); return }
     if (variantsLoading) return
     let variants: VariantDraft | null = null
@@ -339,6 +349,9 @@ export default function ProductModal({
     setSaving(true)
     await onSave({
       ...form,
+      title,
+      description,
+      stockNum: form.stockNum.trim(),
       price,
       unit,
       img: imgUrl,
@@ -379,6 +392,7 @@ export default function ProductModal({
             <label style={labelStyle}>Nombre del producto</label>
             <input
               value={form.title}
+              maxLength={LIMITS.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="Ej: Café Especial Nariño"
               style={inputStyle}
@@ -681,6 +695,7 @@ export default function ProductModal({
             <label style={labelStyle}>Descripción</label>
             <textarea
               value={form.description}
+              maxLength={LIMITS.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Descripción detallada del producto, origen y proceso..."
               rows={3}
@@ -698,6 +713,12 @@ export default function ProductModal({
             Producto certificado orgánico o de calidad
           </label>
         </div>
+
+        {formError && (
+          <p role="alert" className="flex-shrink-0 m-0 px-5 sm:px-7 py-2 text-[#C0392B] text-xs sm:text-sm font-bold font-['Nunito_Sans'] bg-[#FEF2F2] border-t border-[#FECACA]">
+            {formError}
+          </p>
+        )}
 
         {/* ── Footer fijo ── */}
         <div className="flex-shrink-0 flex items-center justify-end gap-3 px-5 sm:px-7 py-3.5 border-t border-[#F0EAE1] bg-[#FAF7F2]">

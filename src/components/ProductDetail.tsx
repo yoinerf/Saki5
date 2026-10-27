@@ -16,6 +16,7 @@ import {
   type VariantOptions,
 } from '../lib/variants'
 import type { Database } from '../lib/database.types'
+import { LIMITS, cleanMultiline, textError } from '../lib/validation'
 
 // Reseña con el nombre público del autor (vista public_profiles)
 type ReviewWithAuthor = Pick<Database['public']['Tables']['product_reviews']['Row'], 'id' | 'rating' | 'comment' | 'created_at' | 'user_id'> & {
@@ -161,6 +162,12 @@ export default function ProductDetail({
       setReviewMsg('Debes elegir de 1 a 5 estrellas.')
       return
     }
+    const comment = cleanMultiline(newComment)
+    const commentError = textError('Comentario', comment, { max: LIMITS.review })
+    if (commentError) {
+      setReviewMsg(commentError)
+      return
+    }
     setSubmittingReview(true)
     setReviewMsg('')
     try {
@@ -169,7 +176,7 @@ export default function ProductDetail({
           product_id: product.id,
           user_id: user.id,
           rating: newRating,
-          comment: newComment.trim() || null,
+          comment: comment || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'product_id,user_id' }
@@ -816,6 +823,7 @@ export default function ProductDetail({
 
                   <textarea
                     value={newComment}
+                    maxLength={LIMITS.review}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Escribe tu opinión sobre la calidad, sabor o presentación..."
                     rows={3}

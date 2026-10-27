@@ -6,7 +6,8 @@ import { onlyPhoneDigits, phoneInputProps } from '../lib/phone'
 import { MIN_PASSWORD_LENGTH } from '../components/PasswordFields'
 import { generateTempPassword } from '../components/TempPasswordModal'
 import { supabase } from '../lib/supabase'
-import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
+import { cleanLine, isValidEmail, profileFieldsError } from '../lib/validation'
 import { adminCreateUser, adminDeleteUser } from '../lib/adminUsers'
 import { usePanelSectionRequest } from '../lib/notifications'
 import { isMainStore } from '../lib/stores'
@@ -214,7 +215,14 @@ export default function StoreAdminScreen({ store, onNavigate }: Props) {
 
   const saveProducer = async () => {
     const d = form.data
-    if (!d.first_name.trim()) return showToast('error', 'El nombre es obligatorio.')
+    const cleaned = {
+      first_name: cleanLine(d.first_name),
+      last_name: cleanLine(d.last_name),
+      org_name: cleanLine(d.org_name),
+      phone: onlyPhoneDigits(d.phone),
+    }
+    const fieldsError = profileFieldsError(cleaned)
+    if (fieldsError) return showToast('error', fieldsError)
     // Al crear el documento es obligatorio; al editar productores antiguos puede faltar
     const docError = form.editingId ? validateOptionalDocument(d.document_type, d.document_number) : validateDocument(d.document_type, d.document_number)
     if (docError) return showToast('error', docError)
@@ -229,10 +237,10 @@ export default function StoreAdminScreen({ store, onNavigate }: Props) {
       const { data, error } = await supabase
         .from('profiles')
         .update({
-          first_name: d.first_name.trim(),
-          last_name: d.last_name.trim(),
-          org_name: d.org_name.trim() || null,
-          phone: onlyPhoneDigits(d.phone) || null,
+          first_name: cleaned.first_name,
+          last_name: cleaned.last_name,
+          org_name: cleaned.org_name || null,
+          phone: cleaned.phone || null,
           department: d.department || null,
           municipality: d.municipality || null,
           ...documentColumns(d.document_type, d.document_number),
@@ -243,19 +251,16 @@ export default function StoreAdminScreen({ store, onNavigate }: Props) {
       if (error || !data?.length) return showToast('error', `No se pudo guardar: ${error?.message ?? 'no tienes permiso sobre este productor.'}`)
       showToast('ok', 'Productor actualizado.')
     } else {
-      if (!/^\S+@\S+\.\S+$/.test(d.email.trim())) {
+      if (!isValidEmail(d.email.trim().toLowerCase())) {
         setSaving(false)
         return showToast('error', 'Ingresa un correo válido.')
       }
       // Rol 'asociacion' y tienda los asigna la edge function desde el perfil del administrador
       const password = d.password
       const result = await adminCreateUser({
-        email: d.email.trim(),
+        email: d.email.trim().toLowerCase(),
         password,
-        first_name: d.first_name.trim(),
-        last_name: d.last_name.trim(),
-        org_name: d.org_name.trim(),
-        phone: onlyPhoneDigits(d.phone),
+        ...cleaned,
         department: d.department,
         municipality: d.municipality,
         document_type: d.document_type,
@@ -368,7 +373,7 @@ export default function StoreAdminScreen({ store, onNavigate }: Props) {
               </div>
               <div style={{ fontSize: 11, color: SIDEBAR.text }}>Admin de tienda</div>
             </div>
-            <button type="button" onClick={async () => { clearPromoSession(); await supabase.auth.signOut(); window.location.href = !isMainStore(store) && storeSlug ? `/${storeSlug}` : '/' }} title="Cerrar sesión" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFD3BF', padding: 4 }}>
+            <button type="button" onClick={() => signOutUser(!isMainStore(store) && storeSlug ? `/${storeSlug}` : '/')} title="Cerrar sesión" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFD3BF', padding: 4 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
               </svg>
