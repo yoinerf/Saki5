@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import ScreenShell from '../components/ScreenShell'
 import { supabase } from '../lib/supabase'
-import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
 import { fetchSellerSales } from '../lib/orders'
 import type { Tab, UserRole } from '../lib/types'
 
@@ -638,9 +638,7 @@ export default function ProfileScreen({ userRole: propRole, onNavigate, activeNa
         {/* Logout */}
         <button
           onClick={async () => {
-            clearPromoSession()
-            await supabase.auth.signOut()
-            window.location.href = '/'
+            await signOutUser('/')
           }}
           style={{
             width: '100%',

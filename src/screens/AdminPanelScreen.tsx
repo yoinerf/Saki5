@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { signOutUser } from '../lib/session'
+import { LIMITS, cleanLine, integerError, profileFieldsError } from '../lib/validation'
 import logoSrc from '../assets/logo-nofond.png'
 import ExperienceModal, { type ExperienceFormData } from '../components/ExperienceModal'
 import ProductModal, { type ProductFormData } from '../components/ProductModal'
@@ -156,8 +158,13 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
 
   const handleSaveStock = async () => {
     if (!stockModal) return
+    const stockError = integerError(stockModal.newStock, isTurismo ? 'Cupos' : 'Stock')
+    if (stockError) {
+      await alertDialog({ title: 'Cantidad inválida', message: stockError, tone: 'warning' })
+      return
+    }
     setSavingStock(true)
-    const newVal = parseInt(stockModal.newStock) || 0
+    const newVal = Number(stockModal.newStock.trim())
     let error
     if (isTurismo) {
       // Para turismo actualizamos capacity como texto en experiences
@@ -410,6 +417,17 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
   }
 
   const handleSaveProfile = async () => {
+    const cleaned = {
+      first_name: cleanLine(profileForm.first_name),
+      last_name: cleanLine(profileForm.last_name),
+      org_name: cleanLine(profileForm.org_name),
+      phone: onlyPhoneDigits(profileForm.phone),
+    }
+    const fieldsError = profileFieldsError(cleaned)
+    if (fieldsError) {
+      setProfileMsg('Error: ' + fieldsError)
+      return
+    }
     const docError = validateDocument(profileForm.document_type, profileForm.document_number)
     if (docError) {
       setProfileMsg('Error: ' + docError)
@@ -424,10 +442,10 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSavingProfile(false); return }
     const { error } = await supabase.from('profiles').update({
-      first_name: profileForm.first_name,
-      last_name: profileForm.last_name,
-      org_name: profileForm.org_name,
-      phone: onlyPhoneDigits(profileForm.phone) || null,
+      first_name: cleaned.first_name,
+      last_name: cleaned.last_name,
+      org_name: cleaned.org_name || null,
+      phone: cleaned.phone || null,
       department: profileForm.department,
       municipality: profileForm.municipality,
       document_type: profileForm.document_type,
@@ -440,9 +458,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
     }
 
     // Sincronizar el nombre visible en productos y experiencias ya publicados
-    const displayName = profileForm.org_name?.trim()
-      || `${profileForm.first_name ?? ''} ${profileForm.last_name ?? ''}`.trim()
-      || 'Productor'
+    const displayName = cleaned.org_name || `${cleaned.first_name} ${cleaned.last_name}`.trim() || 'Productor'
 
     await Promise.all([
       supabase.from('products').update({ producer: displayName }).eq('producer_id', user.id),
@@ -451,7 +467,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
 
     setSavingProfile(false)
     setProfileMsg('Perfil actualizado.')
-    setProfile((prev) => ({ ...prev, ...profileForm }))
+    setProfile((prev) => ({ ...prev, ...profileForm, ...cleaned }))
   }
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', borderRadius: 12, border: '1.5px solid #EDE4D8', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: "'Nunito Sans', sans-serif", background: '#FDFAF6', color: '#1C3A14' }
@@ -526,7 +542,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
               </div>
               <div style={{ fontSize: 11, color: '#8A8070' }}>{isTurismo ? 'Turismo' : 'Asociacion'}</div>
             </div>
-            <button type="button" onClick={async () => { await supabase.auth.signOut(); window.location.href = '/'; }} title="Cerrar sesion" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4622D', padding: 4 }}>
+            <button type="button" onClick={() => signOutUser('/')} title="Cerrar sesion" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4622D', padding: 4 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
               </svg>
@@ -839,16 +855,16 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
                       <div>
                         <label style={labelStyle}>Nombre</label>
-                        <input value={profileForm.first_name} onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })} placeholder="Nombre" style={inputStyle} />
+                        <input value={profileForm.first_name} maxLength={LIMITS.personName} onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })} placeholder="Nombre" style={inputStyle} />
                       </div>
                       <div>
                         <label style={labelStyle}>Apellido</label>
-                        <input value={profileForm.last_name} onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })} placeholder="Apellido" style={inputStyle} />
+                        <input value={profileForm.last_name} maxLength={LIMITS.personName} onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })} placeholder="Apellido" style={inputStyle} />
                       </div>
                     </div>
                     <div style={{ marginBottom: 16 }}>
                       <label style={labelStyle}>Nombre de organizacion / asociacion</label>
-                      <input value={profileForm.org_name} onChange={(e) => setProfileForm({ ...profileForm, org_name: e.target.value })} placeholder="Ej: Cooperativa El Roble" style={inputStyle} />
+                      <input value={profileForm.org_name} maxLength={LIMITS.orgName} onChange={(e) => setProfileForm({ ...profileForm, org_name: e.target.value })} placeholder="Ej: Cooperativa El Roble" style={inputStyle} />
                     </div>
                     <div style={{ marginBottom: 16 }}>
                       <label style={labelStyle}>WhatsApp para notificaciones de pedidos</label>

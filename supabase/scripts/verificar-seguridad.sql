@@ -67,3 +67,7 @@ having count(*) > 1;
 -- 9. Jobs de pg_cron activos (deben estar: cleanup-old-notifications, cleanup-rate-limits,
 --    cancelar-pedidos-sin-pago)
 select jobname, schedule, active from cron.job order by 1;
+
+-- 10. Revisión de sesión en cada petición (20261027120000): debe salir
+--     pgrst.db_pre_request=private.check_request_session
+select unnest(rolconfig) as config_authenticator from pg_roles where rolname = 'authenticator';

@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
+import { cleanLine, personNameError } from '../lib/validation'
 import { normalizeDocumentNumber, validateDocument } from '../lib/identity'
 import DocumentFields from '../components/DocumentFields'
 import LocationFields from '../components/LocationFields'
@@ -69,7 +70,10 @@ export default function CompleteProfileScreen({ onDone }: { onDone: () => void }
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!firstName.trim()) { setError('Ingresa tu nombre.'); return }
+    const first = cleanLine(firstName)
+    const last = cleanLine(lastName)
+    const nameError = personNameError('Nombre', first) ?? personNameError('Apellido', last, false)
+    if (nameError) { setError(nameError); return }
     const docError = validateDocument(doc.documentType, doc.documentNumber)
     if (docError) { setError(docError); return }
     if (!location.department || !location.municipality) { setError('Selecciona tu departamento y municipio.'); return }
@@ -77,8 +81,8 @@ export default function CompleteProfileScreen({ onDone }: { onDone: () => void }
     setSaving(true)
     const { error: rpcError } = await supabase.rpc('complete_my_profile', {
       p_user_type: accountType,
-      p_first_name: firstName.trim(),
-      p_last_name: lastName.trim(),
+      p_first_name: first,
+      p_last_name: last,
       p_document_type: doc.documentType,
       p_document_number: normalizeDocumentNumber(doc.documentNumber),
       p_department: location.department,
@@ -90,8 +94,7 @@ export default function CompleteProfileScreen({ onDone }: { onDone: () => void }
   }
 
   const signOut = async () => {
-    clearPromoSession()
-    await supabase.auth.signOut()
+    await signOutUser()
   }
 
   return (
