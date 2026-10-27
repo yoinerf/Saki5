@@ -1,0 +1,8 @@
+# Paneles y cuentas no tienen contenido público
+User-agent: *
+Disallow: /mi-cuenta
+Disallow: /panel
+Disallow: /superadmin
+Disallow: /admin-tienda
+
+Sitemap: https://www.saki5.com/sitemap.xml

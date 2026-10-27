@@ -44,3 +44,15 @@ export function routeFromPath(pathname: string, stores: StoreRoute[]): { tab: Ta
   }
   return { tab: PATH_TABS.get(clean) ?? 'home', store: MAIN_STORE }
 }
+
+/**
+ * La ruta corresponde a una pantalla de la app (o a una tienda aliada). Las demás muestran la
+ * página 404: antes cualquier dirección mal escrita abría el inicio sin avisar.
+ */
+export function isKnownPath(pathname: string, stores: StoreRoute[]): boolean {
+  const clean = pathname.replace(/\/+$/, '').replace(/\/index\.html$/, '') || '/'
+  if (PATH_TABS.has(clean)) return true
+  const [, first = '', ...rest] = clean.split('/')
+  const allied = stores.some((s) => s.store !== MAIN_STORE && s.slug === first)
+  return allied && (rest.length === 0 || PATH_TABS.has(`/${rest.join('/')}`))
+}

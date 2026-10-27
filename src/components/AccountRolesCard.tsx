@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth'
 import { useAppNavigation } from '../lib/navigation'
 import { confirmDialog } from './ConfirmDialog'
 import { ROLE_LABELS, addableRoles, sellerRole, storeActiveRole, type AddableRole } from '../lib/roles'
+import { cleanLine, orgNameError } from '../lib/validation'
 
 // Roles de la cuenta en el panel del comprador. Una cuenta que solo es Comprador puede agregar
 // Asociación o Turismo sin crear otra cuenta: add_my_role valida en la base que no tenga ya
@@ -66,6 +67,12 @@ export default function AccountRolesCard({ requirementsError, onCompleteData, in
       setError(requirementsError)
       return
     }
+    const org = cleanLine(orgName)
+    const orgError = orgNameError(org)
+    if (orgError) {
+      setError(orgError)
+      return
+    }
     const confirmed = await confirmDialog({
       title: `¿Agregar el rol ${ROLE_LABELS[selected]}?`,
       message: `Se agregará a tu cuenta actual: seguirás siendo Comprador, con los mismos datos, pedidos y favoritos. ${ROLE_INFO[selected].verification}`,
@@ -74,7 +81,7 @@ export default function AccountRolesCard({ requirementsError, onCompleteData, in
     if (!confirmed) return
 
     setSaving(true)
-    const { error: rpcError } = await supabase.rpc('add_my_role', { p_role: selected, p_org_name: orgName.trim() || undefined })
+    const { error: rpcError } = await supabase.rpc('add_my_role', { p_role: selected, p_org_name: org || undefined })
     if (rpcError) {
       setSaving(false)
       setError(rpcError.message || 'No se pudo agregar el rol.')

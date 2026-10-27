@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MAX_IMAGE_MB, uploadPublicImage, validateImage, type SavedImage } from '../lib/imageUpload'
+import { LIMITS, cleanLine, cleanMultiline, integerError, parseTags, priceError, tagsError, textError } from '../lib/validation'
 
 /** Experiencia existente con la que se precarga el formulario */
 export interface ExperienceInitialData {
@@ -102,6 +103,7 @@ export default function ExperienceModal({
   const [existingImg, setExistingImg] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [formError, setFormError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -146,6 +148,7 @@ export default function ExperienceModal({
       }
       setImages([])
       setUploadError('')
+      setFormError('')
     }
   }, [isOpen, initialData, categories, hosts])
 
@@ -190,13 +193,30 @@ export default function ExperienceModal({
   }
 
   const handleSave = async () => {
-    if (!form.title.trim() || !form.price) return
+    const title = cleanLine(form.title)
+    const description = cleanMultiline(form.description)
+    const duration = cleanLine(form.duration)
+    const tags = parseTags(form.tags)
+    const fieldsError =
+      textError('Nombre de la experiencia', title, { max: LIMITS.title, required: true }) ??
+      priceError(form.price) ??
+      integerError(form.capacity, 'Cupos disponibles', 1, 10_000) ??
+      textError('Duración', duration, { max: LIMITS.shortText }) ??
+      tagsError(tags) ??
+      textError('Descripción', description, { max: LIMITS.description })
+    setFormError(fieldsError ?? '')
+    if (fieldsError) return
     if (images.some(i => i.uploading)) { setUploadError('Espera a que terminen de subir las imágenes'); return }
     const primaryUploaded = images.find(i => i.publicUrl)
     const imgUrl = primaryUploaded?.publicUrl || existingImg || ''
     setSaving(true)
     await onSave({
       ...form,
+      title,
+      description,
+      duration,
+      capacity: form.capacity.trim(),
+      tags: tags.join(', '),
       img: imgUrl,
       uploadedImages: images.filter(i => i.publicUrl).map((img, idx) => ({
         storagePath: img.storagePath!,
@@ -232,6 +252,7 @@ export default function ExperienceModal({
             <label style={labelStyle}>Nombre de la experiencia</label>
             <input
               value={form.title}
+              maxLength={LIMITS.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="Ej: Visita guiada a la finca cafetera"
               style={inputStyle}
@@ -316,6 +337,7 @@ export default function ExperienceModal({
               <label style={labelStyle}>Duración</label>
               <input
                 value={form.duration}
+                maxLength={LIMITS.shortText}
                 onChange={(e) => setForm({ ...form, duration: e.target.value })}
                 placeholder="2 horas"
                 style={inputStyle}
@@ -432,6 +454,7 @@ export default function ExperienceModal({
             <label style={labelStyle}>Descripción</label>
             <textarea
               value={form.description}
+              maxLength={LIMITS.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Descripción detallada de la experiencia, recorrido e itinerario..."
               rows={3}
@@ -449,6 +472,12 @@ export default function ExperienceModal({
             Destacar experiencia
           </label>
         </div>
+
+        {formError && (
+          <p role="alert" className="flex-shrink-0 m-0 px-5 sm:px-7 py-2 text-[#C0392B] text-xs sm:text-sm font-bold font-['Nunito_Sans'] bg-[#FEF2F2] border-t border-[#FECACA]">
+            {formError}
+          </p>
+        )}
 
         {/* ── Footer fijo ── */}
         <div className="flex-shrink-0 flex items-center justify-end gap-3 px-5 sm:px-7 py-3.5 border-t border-[#F0EAE1] bg-[#FAF7F2]">

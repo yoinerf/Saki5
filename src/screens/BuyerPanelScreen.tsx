@@ -3,7 +3,7 @@ import { StatusBadge } from '../components/OrdersTable'
 import NotificationBell from '../components/NotificationBell'
 import AccountRolesCard from '../components/AccountRolesCard'
 import logoSrc from '../assets/logo-nofond.png'
-import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABELS, roleRequirementsError, sellerRole } from '../lib/roles'
 import ChangePasswordCard from '../components/ChangePasswordCard'
@@ -39,6 +39,7 @@ import { isTab, type Tab, type UserRole } from '../lib/types'
 import LocationFields from '../components/LocationFields'
 import DocumentFields from '../components/DocumentFields'
 import { normalizeDocumentNumber, validateDocument } from '../lib/identity'
+import { LIMITS, cleanLine, cleanMultiline, profileFieldsError, textError } from '../lib/validation'
 
 type BuyerSection = 'overview' | 'orders' | 'payments' | 'reviews' | 'favorites' | 'tickets' | 'profile' | 'roles'
 
@@ -378,8 +379,13 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
   }
 
   const submitTicket = async () => {
-    if (!ticketForm.subject.trim() || !ticketForm.description.trim()) {
-      showToast('error', 'Escribe un asunto y una descripción.')
+    const subject = cleanLine(ticketForm.subject)
+    const description = cleanMultiline(ticketForm.description)
+    const ticketError =
+      textError('Asunto', subject, { max: LIMITS.ticketSubject, required: true }) ??
+      textError('Descripción', description, { max: LIMITS.ticketDescription, required: true })
+    if (ticketError) {
+      showToast('error', ticketError)
       return
     }
     setSavingTicket(true)
@@ -387,8 +393,8 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
       order_id: ticketForm.order_id || null,
       type: ticketForm.type,
       category: ticketForm.category,
-      subject: ticketForm.subject.trim(),
-      description: ticketForm.description.trim(),
+      subject,
+      description,
     }
     const editing = ticketForm.editingId
     const { error } = editing
@@ -422,9 +428,12 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
     if (!reviewDraft) return
     // Las estrellas empiezan vacías: la calificación la elige el comprador, no viene marcada
     if (reviewDraft.rating < 1) { showToast('error', 'Elige de 1 a 5 estrellas.'); return }
+    const comment = cleanMultiline(reviewDraft.comment)
+    const commentError = textError('Comentario', comment, { max: LIMITS.review })
+    if (commentError) { showToast('error', commentError); return }
     setSavingReview(true)
     const { error } = await supabase.from('product_reviews').upsert(
-      { product_id: reviewDraft.productId, user_id: userId, rating: reviewDraft.rating, comment: reviewDraft.comment.trim() || null, updated_at: new Date().toISOString() },
+      { product_id: reviewDraft.productId, user_id: userId, rating: reviewDraft.rating, comment: comment || null, updated_at: new Date().toISOString() },
       { onConflict: 'product_id,user_id' }
     )
     setSavingReview(false)
@@ -451,8 +460,15 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
   // ─── Perfil ───────────────────────────────────────────────────────────────
   const [savingProfile, setSavingProfile] = useState(false)
   const saveProfile = async () => {
-    if (!profile.first_name.trim() || !profile.last_name.trim()) {
-      showToast('error', 'Nombre y apellido son obligatorios.')
+    const cleaned = {
+      first_name: cleanLine(profile.first_name),
+      last_name: cleanLine(profile.last_name),
+      phone: onlyPhoneDigits(profile.phone),
+      address: cleanLine(profile.address),
+    }
+    const fieldsError = profileFieldsError(cleaned, { requireLastName: true })
+    if (fieldsError) {
+      showToast('error', fieldsError)
       return
     }
     const docError = validateDocument(profile.document_type, profile.document_number)
@@ -466,12 +482,12 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
     }
     setSavingProfile(true)
     const { error } = await supabase.from('profiles').update({
-      first_name: profile.first_name.trim(),
-      last_name: profile.last_name.trim(),
-      phone: onlyPhoneDigits(profile.phone) || null,
+      first_name: cleaned.first_name,
+      last_name: cleaned.last_name,
+      phone: cleaned.phone || null,
       department: profile.department || null,
       municipality: profile.municipality || null,
-      address: profile.address.trim() || null,
+      address: cleaned.address || null,
       document_type: profile.document_type,
       document_number: normalizeDocumentNumber(profile.document_number),
     }).eq('id', userId)
@@ -501,10 +517,8 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
   }
 
   const signOut = async () => {
-    clearPromoSession()
-    await supabase.auth.signOut()
     const slug = getStore(store).slug
-    window.location.href = isAllied && slug ? `/${slug}` : '/'
+    await signOutUser(isAllied && slug ? `/${slug}` : '/')
   }
 
   const renderOrderCard = (o: BuyerOrder) => {
@@ -826,6 +840,7 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
                     <Stars value={reviewDraft.rating} onChange={(v) => setReviewDraft({ ...reviewDraft, rating: v })} size={30} />
                     <textarea
                       value={reviewDraft.comment}
+                      maxLength={LIMITS.review}
                       onChange={(e) => setReviewDraft({ ...reviewDraft, comment: e.target.value })}
                       placeholder="Cuéntanos cómo te pareció el producto (opcional)"
                       rows={3}
@@ -967,7 +982,7 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
                     </div>
                     <div style={{ marginTop: 12 }}>
                       <label style={labelStyle}>Descripción *</label>
-                      <textarea value={ticketForm.description} onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })} rows={4} placeholder="Cuéntanos con detalle qué pasó o qué necesitas." style={{ ...inputStyle, resize: 'vertical' }} />
+                      <textarea value={ticketForm.description} maxLength={LIMITS.ticketDescription} onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })} rows={4} placeholder="Cuéntanos con detalle qué pasó o qué necesitas." style={{ ...inputStyle, resize: 'vertical' }} />
                     </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
                       <button type="button" style={btnGhost} onClick={() => setTicketForm({ ...ticketForm, open: false, editingId: null })}>Cancelar</button>
@@ -1033,11 +1048,11 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
                   <div>
                     <label style={labelStyle}>Nombre *</label>
-                    <input value={profile.first_name} onChange={(e) => setProfile({ ...profile, first_name: e.target.value })} style={inputStyle} />
+                    <input value={profile.first_name} maxLength={LIMITS.personName} onChange={(e) => setProfile({ ...profile, first_name: e.target.value })} style={inputStyle} />
                   </div>
                   <div>
                     <label style={labelStyle}>Apellido *</label>
-                    <input value={profile.last_name} onChange={(e) => setProfile({ ...profile, last_name: e.target.value })} style={inputStyle} />
+                    <input value={profile.last_name} maxLength={LIMITS.personName} onChange={(e) => setProfile({ ...profile, last_name: e.target.value })} style={inputStyle} />
                   </div>
                   <div>
                     <label style={labelStyle}>Correo electrónico</label>
@@ -1064,7 +1079,7 @@ export default function BuyerPanelScreen({ onNavigate, onViewProduct, store = 'c
                 </div>
                 <div style={{ marginTop: 14 }}>
                   <label style={labelStyle}>Dirección de entrega</label>
-                  <input value={profile.address} onChange={(e) => setProfile({ ...profile, address: e.target.value })} placeholder="Calle, número, barrio, apto..." style={inputStyle} />
+                  <input value={profile.address} maxLength={LIMITS.address} onChange={(e) => setProfile({ ...profile, address: e.target.value })} placeholder="Calle, número, barrio, apto..." style={inputStyle} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
                   <button type="button" style={{ ...btnPrimary, opacity: savingProfile ? 0.6 : 1 }} disabled={savingProfile} onClick={saveProfile}>{savingProfile ? 'Guardando...' : 'Guardar cambios'}</button>

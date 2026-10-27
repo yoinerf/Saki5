@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
 
 // "Eliminar mi cuenta" (derecho de supresión, Ley 1581 de 2012). Antes solo se podía pidiéndolo por
 // correo. La Edge Function delete-account valida que no haya pedidos en curso y borra o anonimiza.
@@ -36,9 +36,8 @@ export default function DeleteAccountCard({ style }: { style?: CSSProperties }) 
       setError(message)
       return
     }
-    clearPromoSession()
-    await supabase.auth.signOut()
-    window.location.href = import.meta.env.BASE_URL
+    // La cuenta ya no existe: solo queda limpiar este navegador
+    await signOutUser(import.meta.env.BASE_URL)
   }
 
   return (

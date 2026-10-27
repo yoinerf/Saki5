@@ -7,6 +7,8 @@ import GoogleSignInButton, { AuthDivider } from '../components/GoogleSignInButto
 import LegalNotice from '../components/LegalNotice'
 import { LEGAL_PATHS } from '../lib/legal'
 import { normalizeDocumentNumber, validateDocument } from '../lib/identity'
+import { cleanLine, isValidEmail, personNameError } from '../lib/validation'
+import { validateNewPassword } from '../components/PasswordFields'
 
 // Estilos de los campos del formulario (los selects de ubicación y documento usan los mismos)
 const FIELD_LABEL: React.CSSProperties = {
@@ -65,9 +67,18 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
     if (e) e.preventDefault()
     setError('')
 
-    // Validaciones
-    if (!fullName.trim()) {
+    // Validaciones (la base y Auth vuelven a validar: esto solo avisa antes de enviar)
+    const name = cleanLine(fullName)
+    if (!name) {
       setError('Por favor ingresa tu nombre completo')
+      return
+    }
+    // Separar nombre y apellido
+    const firstName = name.split(' ')[0]
+    const lastName = name.split(' ').slice(1).join(' ')
+    const nameError = personNameError('Nombre', firstName) ?? personNameError('Apellido', lastName, false)
+    if (nameError) {
+      setError(nameError)
       return
     }
     const docError = validateDocument(doc.documentType, doc.documentNumber)
@@ -79,16 +90,14 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
       setError('Por favor selecciona tu departamento y municipio')
       return
     }
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+    const cleanEmail = email.trim().toLowerCase()
+    if (!isValidEmail(cleanEmail)) {
       setError('Por favor ingresa un correo electrónico válido')
       return
     }
-    if (!password || password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden')
+    const passwordProblem = validateNewPassword(password, confirmPassword)
+    if (passwordProblem) {
+      setError(passwordProblem)
       return
     }
     if (!acceptTerms) {
@@ -98,14 +107,9 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
 
     setLoading(true)
 
-    // Separar nombre y apellido
-    const nameParts = fullName.trim().split(' ')
-    const firstName = nameParts[0] || ''
-    const lastName = nameParts.slice(1).join(' ') || ''
-
     // 1. Registro en Supabase Auth
     const { error: authError } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: cleanEmail,
       password,
       options: {
         data: {
@@ -344,6 +348,7 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
                     id="register-fullname"
                     type="text"
                     value={fullName}
+                    maxLength={201}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Juan Pérez Gómez"
                     autoComplete="name"
@@ -408,6 +413,7 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
                     id="register-email"
                     type="email"
                     value={email}
+                    maxLength={254}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="ejemplo@correo.com"
                     autoComplete="email"
@@ -525,6 +531,7 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
                       id="register-password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
+                    maxLength={72}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Mínimo 8 caracteres"
                       autoComplete="new-password"
@@ -605,6 +612,7 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
                       id="register-confirm-password"
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
+                    maxLength={72}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="new-password"

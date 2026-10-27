@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { onlyPhoneDigits, phoneInputProps } from '../lib/phone'
 import { normalizeDocumentNumber, validateDocument } from '../lib/identity'
+import { LIMITS, cleanLine, profileFieldsError } from '../lib/validation'
 import DocumentFields from './DocumentFields'
 import LocationFields from './LocationFields'
 
@@ -61,7 +62,9 @@ export default function MyAccountCard({ style, onSaved }: { style?: CSSPropertie
 
   const handleSave = async () => {
     if (!userId) return
-    if (!form.first_name.trim()) { setMsg({ ok: false, text: 'El nombre es obligatorio.' }); return }
+    const cleaned = { first_name: cleanLine(form.first_name), last_name: cleanLine(form.last_name), phone: onlyPhoneDigits(form.phone) }
+    const fieldsError = profileFieldsError(cleaned)
+    if (fieldsError) { setMsg({ ok: false, text: fieldsError }); return }
     const docError = validateDocument(form.document_type, form.document_number)
     if (docError) { setMsg({ ok: false, text: docError }); return }
     if (!form.department || !form.municipality) { setMsg({ ok: false, text: 'Selecciona el departamento y el municipio.' }); return }
@@ -69,9 +72,9 @@ export default function MyAccountCard({ style, onSaved }: { style?: CSSPropertie
     setSaving(true)
     setMsg(null)
     const { error } = await supabase.from('profiles').update({
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim(),
-      phone: onlyPhoneDigits(form.phone) || null,
+      first_name: cleaned.first_name,
+      last_name: cleaned.last_name,
+      phone: cleaned.phone || null,
       document_type: form.document_type,
       document_number: normalizeDocumentNumber(form.document_number),
       department: form.department,
@@ -95,11 +98,11 @@ export default function MyAccountCard({ style, onSaved }: { style?: CSSPropertie
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
             <div>
               <label style={labelStyle}>Nombre *</label>
-              <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} autoComplete="given-name" style={inputStyle} />
+              <input value={form.first_name} maxLength={LIMITS.personName} onChange={(e) => setForm({ ...form, first_name: e.target.value })} autoComplete="given-name" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Apellido</label>
-              <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} autoComplete="family-name" style={inputStyle} />
+              <input value={form.last_name} maxLength={LIMITS.personName} onChange={(e) => setForm({ ...form, last_name: e.target.value })} autoComplete="family-name" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Correo electrónico</label>

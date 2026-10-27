@@ -9,7 +9,7 @@ import { getNextStatuses, summarizeStatusesByItem, type OrderItemRow, type Order
 import { validationState, validateDocFile, type ProducerDocument } from './producerDocuments'
 import { MAX_IMAGE_BYTES, validateImage } from './imageUpload'
 import { TABS, isTab } from './types'
-import { pathForTab, routeFromPath } from './routes'
+import { isKnownPath, pathForTab, routeFromPath } from './routes'
 import { documentColumns, normalizeDocumentNumber, validateDocument, validateOptionalDocument } from './identity'
 import { DEPARTMENTS, findDepartment, findMunicipality, municipalitiesOf } from './geo'
 import { cartItemKey, cartItemPrice, type Product } from './catalog'
@@ -38,6 +38,22 @@ import {
 } from './variants'
 import { DEFAULT_UNIT, UNITS, formatMeasure, isMeasureAmount, normalizeUnit, parseOptionInput } from './units'
 import { findOrphans, uniquePaths, type StoredFile } from './storageCleanup'
+import {
+  cleanLine,
+  cleanMultiline,
+  cleanShipping,
+  integerError,
+  isValidEmail,
+  orgNameError,
+  parseTags,
+  personNameError,
+  phoneError,
+  priceError,
+  profileFieldsError,
+  shippingError,
+  tagsError,
+  textError,
+} from './validation'
 import { addableRoles, resolveActiveRole, resolveRoles, roleRequirementsError, rolesForUserType, sellerRole } from './roles'
 
 const fakeFile = (type: string, size: number, name = 'archivo') => ({ type, size, name }) as File
@@ -576,5 +592,105 @@ describe('limpieza del Storage', () => {
     ]
     const orphans = findOrphans(files, new Set(['u1/en-uso.jpg']), now, 24)
     expect(orphans.map((o) => o.path)).toEqual(['u1/viejo.jpg'])
+  })
+})
+
+describe('validation', () => {
+  it('cleanLine quita caracteres invisibles, de control y espacios repetidos', () => {
+    expect(cleanLine('  Cooperativa‮  El​ Roble\u0007 ')).toBe('Cooperativa El Roble')
+    expect(cleanLine('Línea 1\nLínea 2')).toBe('Línea 1 Línea 2')
+    expect(cleanLine(null)).toBe('')
+  })
+
+  it('cleanMultiline conserva saltos de línea pero no más de una línea en blanco', () => {
+    expect(cleanMultiline('Hola  \r\n\r\n\r\n\r\n  mundo\u0000 ')).toBe('Hola\n\nmundo')
+  })
+
+  it('textError valida obligatorio, largo y < >', () => {
+    expect(textError('Asunto', '', { max: 10, required: true })).toContain('Completa')
+    expect(textError('Asunto', '', { max: 10 })).toBeNull()
+    expect(textError('Asunto', 'x'.repeat(11), { max: 10 })).toContain('máximo 10')
+    expect(textError('Asunto', '<b>hola</b>', { max: 100 })).toContain('<')
+    expect(textError('Asunto', 'Pedido #12 (fresas)', { max: 100 })).toBeNull()
+  })
+
+  it('personNameError acepta nombres reales y rechaza números o símbolos', () => {
+    expect(personNameError('Nombre', 'María José')).toBeNull()
+    expect(personNameError('Apellido', "O'Neil-Pérez")).toBeNull()
+    expect(personNameError('Nombre', 'Admin123')).not.toBeNull()
+    expect(personNameError('Nombre', '')).not.toBeNull()
+    expect(personNameError('Apellido', '', false)).toBeNull()
+  })
+
+  it('orgNameError exige letras y largo máximo', () => {
+    expect(orgNameError('Cooperativa El Roble S.A.S.')).toBeNull()
+    expect(orgNameError('12345')).not.toBeNull()
+    expect(orgNameError('a'.repeat(201))).not.toBeNull()
+  })
+
+  it('phoneError acepta celulares y fijos de Colombia de 10 dígitos', () => {
+    expect(phoneError('3001234567')).toBeNull()
+    expect(phoneError('6012345678')).toBeNull()
+    expect(phoneError('')).toBeNull()
+    expect(phoneError('', true)).not.toBeNull()
+    expect(phoneError('12345')).not.toBeNull()
+    expect(phoneError('9001234567')).not.toBeNull()
+  })
+
+  it('isValidEmail', () => {
+    expect(isValidEmail('ana@campo.co')).toBe(true)
+    expect(isValidEmail('ana@campo')).toBe(false)
+    expect(isValidEmail('ana <x>@campo.co')).toBe(false)
+    expect(isValidEmail(`${'a'.repeat(250)}@x.co`)).toBe(false)
+  })
+
+  it('priceError e integerError', () => {
+    expect(priceError('28000')).toBeNull()
+    expect(priceError('1500.50')).toBeNull()
+    expect(priceError('0')).not.toBeNull()
+    expect(priceError('-5')).not.toBeNull()
+    expect(priceError('1e9')).not.toBeNull()
+    expect(integerError('45', 'Stock')).toBeNull()
+    expect(integerError('-1', 'Stock')).not.toBeNull()
+    expect(integerError('2.5', 'Stock')).not.toBeNull()
+    expect(integerError('0', 'Cupos', 1)).not.toBeNull()
+  })
+
+  it('parseTags limpia y quita repetidas; tagsError limita cantidad y largo', () => {
+    expect(parseTags(' Naturaleza, senderismo ,, naturaleza ')).toEqual(['Naturaleza', 'senderismo'])
+    expect(tagsError(Array.from({ length: 21 }, (_, i) => `t${i}`))).not.toBeNull()
+    expect(tagsError(['x'.repeat(41)])).not.toBeNull()
+    expect(tagsError(['Taller'])).toBeNull()
+  })
+
+  it('profileFieldsError revisa nombre, apellido, organización, teléfono y dirección', () => {
+    const ok = { first_name: 'Ana', last_name: 'Gómez', org_name: '', phone: '3001234567', address: 'Calle 10 # 4-15' }
+    expect(profileFieldsError(ok)).toBeNull()
+    expect(profileFieldsError({ ...ok, last_name: '' }, { requireLastName: true })).not.toBeNull()
+    expect(profileFieldsError({ ...ok, phone: '123' })).not.toBeNull()
+    expect(profileFieldsError({ ...ok, address: 'x'.repeat(201) })).not.toBeNull()
+  })
+
+  it('cleanShipping y shippingError', () => {
+    const s = cleanShipping({ fullName: ' Ana  Gómez ', phone: '300 123 4567', department: 'Cundinamarca', municipality: 'Bogotá', address: 'Calle 1', deliveryNotes: '' })
+    expect(s.fullName).toBe('Ana Gómez')
+    expect(s.phone).toBe('3001234567')
+    expect(shippingError(s)).toBeNull()
+    expect(shippingError({ ...s, address: '' })).not.toBeNull()
+    expect(shippingError({ ...s, phone: '300' })).not.toBeNull()
+  })
+})
+
+describe('isKnownPath (página 404)', () => {
+  const stores = [{ store: 'campo', slug: null }, { store: 'amazonia', slug: 'tienda-amazonica' }]
+  it('reconoce las pantallas y las tiendas aliadas', () => {
+    for (const path of ['/', '/productos', '/experiencias/', '/mi-cuenta', '/index.html', '/tienda-amazonica', '/tienda-amazonica/mi-cuenta']) {
+      expect(isKnownPath(path, stores)).toBe(true)
+    }
+  })
+  it('las demás direcciones son 404', () => {
+    for (const path of ['/productoss', '/tienda-inexistente', '/tienda-amazonica/otra', '/productos/123', '/wp-admin']) {
+      expect(isKnownPath(path, stores)).toBe(false)
+    }
   })
 })

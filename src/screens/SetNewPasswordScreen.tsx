@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
+import { useAuth } from '../lib/auth'
 import logoSrc from '../assets/logo-nofond.png'
 import PasswordFields, { validateNewPassword } from '../components/PasswordFields'
 
@@ -17,6 +18,9 @@ export default function SetNewPasswordScreen({ mode, onDone }: Props) {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
+  // Un enlace de recuperación inicia sesión en la cuenta que lo pidió. Si alguien envía el enlace de
+  // SU cuenta, la víctima quedaría usando la cuenta ajena: por eso se muestra a qué correo se aplica.
+  const email = useAuth().session?.user.email
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,9 +48,7 @@ export default function SetNewPasswordScreen({ mode, onDone }: Props) {
   }
 
   const signOut = async () => {
-    clearPromoSession()
-    await supabase.auth.signOut()
-    window.location.href = import.meta.env.BASE_URL
+    await signOutUser(import.meta.env.BASE_URL)
   }
 
   return (
@@ -73,6 +75,12 @@ export default function SetNewPasswordScreen({ mode, onDone }: Props) {
                 ? 'Ingresaste con una contraseña temporal. Por seguridad, debes cambiarla antes de continuar.'
                 : 'Escribe la nueva contraseña para tu cuenta.'}
             </p>
+            {email && (
+              <p style={{ fontSize: 13, color: '#1C3A14', background: '#F5EEE6', borderRadius: 10, padding: '8px 12px', margin: '-8px 0 18px', textAlign: 'center', overflowWrap: 'anywhere' }}>
+                Cuenta: <strong>{email}</strong>
+                {mode === 'recovery' && <span style={{ display: 'block', fontSize: 12, color: '#5A5248', marginTop: 2 }}>¿No es tu correo? No continúes: cancela y cierra sesión.</span>}
+              </p>
+            )}
 
             {error && (
               <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 12px', color: '#991B1B', fontSize: 13, fontWeight: 600, marginBottom: 14 }}>⚠️ {error}</div>

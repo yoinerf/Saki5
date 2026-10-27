@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, type CSSProperties, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import { clearPromoSession } from '../lib/promoSession'
+import { signOutUser } from '../lib/session'
 import { MAIN_STORE, isMainStore, type StoreId } from '../lib/stores'
 import { useStores } from '../lib/storesContext'
 import { useAppNavigation } from '../lib/navigation'
@@ -552,9 +552,7 @@ export default function ScreenShell({
                         <div style={{ height: 1, background: '#EDE4D8', margin: '4px 0' }} />
                         <button
                           onClick={async () => {
-                            clearPromoSession()
-                            await supabase.auth.signOut()
-                            window.location.href = isAllied && storeConfig.slug ? `/${storeConfig.slug}` : '/'
+                            await signOutUser(isAllied && storeConfig.slug ? `/${storeConfig.slug}` : '/')
                           }}
                           style={{
                             width: '100%',

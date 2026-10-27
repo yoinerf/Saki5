@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import { isAuthApiError, type Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { clearLocalUserData } from './session'
 import { MAIN_STORE, type StoreId } from './stores'
 import type { UserRole } from './types'
 import { readStoredActiveRole, resolveActiveRole, resolveRoles, storeActiveRole } from './roles'
@@ -45,6 +46,9 @@ interface AuthContextValue extends AuthState {
 }
 
 const initialState: AuthState = { session: null, roles: [], store: MAIN_STORE, needsProfileCompletion: false, mustChangePassword: false, loading: true, profileLoadId: 0 }
+
+/** Cada cuánto se confirma con Auth que la sesión sigue vigente */
+const SESSION_CHECK_MS = 5 * 60 * 1000
 
 const AuthContext = createContext<AuthContextValue>({ ...initialState, refreshProfile: async () => {}, setActiveRole: () => {} })
 
@@ -101,11 +105,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({ ...prev, session }))
         return
       }
+      // También cuando la sesión termina sin pasar por signOutUser (otra pestaña, token revocado...)
+      if (event === 'SIGNED_OUT') clearLocalUserData()
       load(session)
     })
 
     return () => listener.subscription.unsubscribe()
   }, [load])
+
+  // Sesión revocada desde otro lado (cerró sesión en otro dispositivo, cambió la contraseña, un admin
+  // eliminó o bloqueó la cuenta): el token guardado en el navegador parece válido hasta que vence,
+  // así que se le pregunta a Auth al volver a la pestaña y cada 5 minutos. Si Auth ya no la reconoce,
+  // se cierra aquí también.
+  const userId = state.session?.user.id
+  useEffect(() => {
+    if (!userId) return
+    let checking = false
+    let lastCheck = Date.now()
+    const verify = async () => {
+      // focus y visibilitychange llegan juntos: como mucho una consulta cada 30 s
+      if (checking || document.visibilityState !== 'visible' || Date.now() - lastCheck < 30_000) return
+      checking = true
+      lastCheck = Date.now()
+      const { error } = await supabase.auth.getUser()
+      checking = false
+      if (error && isAuthApiError(error) && [401, 403, 404].includes(error.status)) {
+        await supabase.auth.signOut({ scope: 'local' })
+      }
+    }
+    const interval = window.setInterval(verify, SESSION_CHECK_MS)
+    document.addEventListener('visibilitychange', verify)
+    window.addEventListener('focus', verify)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', verify)
+      window.removeEventListener('focus', verify)
+    }
+  }, [userId])
 
   const setActiveRole = useCallback((role: UserRole) => {
     setState((prev) => {

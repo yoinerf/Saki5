@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase, authRedirectInfo, authRedirectUrl } from '../lib/supabase'
+import { isValidEmail } from '../lib/validation'
 import logoSrc from '../assets/logo-nofond.png'
 import GoogleSignInButton, { AuthDivider } from '../components/GoogleSignInButton'
 import LegalNotice from '../components/LegalNotice'
@@ -30,8 +31,8 @@ export default function LoginScreen({ onLogin, onRegister, onBackToStore, onBack
   const [forgotMsg, setForgotMsg] = useState('')
 
   const handleForgotPassword = async () => {
-    const target = (forgotEmail || email).trim()
-    if (!/^\S+@\S+\.\S+$/.test(target)) {
+    const target = (forgotEmail || email).trim().toLowerCase()
+    if (!isValidEmail(target)) {
       setForgotMsg('')
       setError('Ingresa un correo electrónico válido para enviarte el enlace.')
       return
@@ -56,22 +57,32 @@ export default function LoginScreen({ onLogin, onRegister, onBackToStore, onBack
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanEmail || !password) {
       setError('Ingresa tu correo electrónico y contraseña')
+      return
+    }
+    if (!isValidEmail(cleanEmail)) {
+      setError('Ingresa un correo electrónico válido')
       return
     }
     setError('')
     setLoading(true)
 
     const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
+      email: cleanEmail,
       password,
     })
 
     setLoading(false)
 
     if (loginError) {
-      setError('Correo o contraseña incorrectos. Por favor verifica tus datos.')
+      // Mensaje neutro: no se revela si el correo existe
+      setError(
+        loginError.status === 429
+          ? 'Demasiados intentos. Espera unos minutos antes de intentarlo de nuevo.'
+          : 'Correo o contraseña incorrectos. Por favor verifica tus datos.'
+      )
       return
     }
 

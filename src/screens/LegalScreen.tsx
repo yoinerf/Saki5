@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import logoSrc from '../assets/logo-nofond.png'
 import { LEGAL_PATHS, type LegalPage } from '../lib/legal'
+import { setPageMeta } from '../lib/seo'
 
 // Política de privacidad y condiciones del servicio. Páginas públicas e independientes de la
 // sesión: Google (pantalla de consentimiento OAuth) y cualquier visitante deben poder abrirlas.
@@ -277,9 +278,15 @@ export default function LegalScreen({ page }: { page: LegalPage }) {
   const other: LegalPage = page === 'privacy' ? 'terms' : 'privacy'
 
   useEffect(() => {
-    document.title = `${title} · ${BRAND}`
+    setPageMeta({
+      title: `${title} · ${BRAND}`,
+      description: page === 'privacy'
+        ? `Cómo ${BRAND} recoge, usa y protege tus datos personales, y cómo ejercer tus derechos (Ley 1581 de 2012).`
+        : `Condiciones para comprar, vender y reservar experiencias en ${BRAND}.`,
+      path: LEGAL_PATHS[page],
+    })
     window.scrollTo(0, 0)
-  }, [title])
+  }, [title, page])
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5EEE6', padding: '32px 16px 48px', boxSizing: 'border-box' }}>
