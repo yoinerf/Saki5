@@ -9,7 +9,7 @@ import { getNextStatuses, summarizeStatusesByItem, type OrderItemRow, type Order
 import { validationState, validateDocFile, type ProducerDocument } from './producerDocuments'
 import { MAX_IMAGE_BYTES, validateImage } from './imageUpload'
 import { TABS, isTab } from './types'
-import { pathForTab, routeFromPath } from './routes'
+import { isKnownPath, pathForTab, routeFromPath } from './routes'
 import { documentColumns, normalizeDocumentNumber, validateDocument, validateOptionalDocument } from './identity'
 import { DEPARTMENTS, findDepartment, findMunicipality, municipalitiesOf } from './geo'
 import { cartItemKey, cartItemPrice, type Product } from './catalog'
@@ -678,5 +678,19 @@ describe('validation', () => {
     expect(shippingError(s)).toBeNull()
     expect(shippingError({ ...s, address: '' })).not.toBeNull()
     expect(shippingError({ ...s, phone: '300' })).not.toBeNull()
+  })
+})
+
+describe('isKnownPath (página 404)', () => {
+  const stores = [{ store: 'campo', slug: null }, { store: 'amazonia', slug: 'tienda-amazonica' }]
+  it('reconoce las pantallas y las tiendas aliadas', () => {
+    for (const path of ['/', '/productos', '/experiencias/', '/mi-cuenta', '/index.html', '/tienda-amazonica', '/tienda-amazonica/mi-cuenta']) {
+      expect(isKnownPath(path, stores)).toBe(true)
+    }
+  })
+  it('las demás direcciones son 404', () => {
+    for (const path of ['/productoss', '/tienda-inexistente', '/tienda-amazonica/otra', '/productos/123', '/wp-admin']) {
+      expect(isKnownPath(path, stores)).toBe(false)
+    }
   })
 })
