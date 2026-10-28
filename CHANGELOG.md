@@ -9,6 +9,13 @@ Cambios importantes de El Campo Nos Une, de la versión más reciente a la más 
 
 ## [Sin publicar]
 
+**Removed**
+- Restos de la plantilla de Figma Make: carpeta `.figma/`, plugins de Figma en `vite.config.ts` (podían
+  inyectar scripts y metadatos duplicados en `index.html`), `.mise.toml` y referencias en la documentación.
+- Código y archivos sin uso: `SuccessToast`, imágenes `banner-campo*.webp` y `public/favicon.png`.
+- Dependencias de desarrollo sin uso (`sharp`, `oxfmt`). El servidor de desarrollo ya no se expone en
+  toda la red por defecto (`vite` sin `--host 0.0.0.0`).
+
 **Changed**
 - Para verificar a un productor y permitirle publicar solo es obligatorio el RUT aprobado. La Cámara
   de Comercio pasa a ser opcional (se puede seguir cargando y revisando). Requiere aplicar la migración
