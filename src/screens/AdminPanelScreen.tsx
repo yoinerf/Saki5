@@ -146,7 +146,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ title: '', category_id: '', price: '', unit: 'uds', stockNum: '45', origin: '', description: '', img: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&h=400&fit=crop&auto=format' })
+  const [form, setForm] = useState({ title: '', category_id: '', price: '', unit: 'uds', stockNum: '45', origin: '', description: '', img: '' })
 
   const [profileForm, setProfileForm] = useState({ first_name: '', last_name: '', org_name: '', phone: '', department: '', municipality: '', document_type: '', document_number: '' })
   const [savingProfile, setSavingProfile] = useState(false)
@@ -229,7 +229,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
         category_id: '',
         origin: '',
         description: e.description || '',
-        img: primaryImageUrl(e.images, 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900&h=700&fit=crop&auto=format'),
+        img: primaryImageUrl(e.images),
         duration: e.duration ?? undefined,
         capacity: e.capacity ?? undefined,
         tags: e.tags ?? undefined,
@@ -250,7 +250,7 @@ export default function AdminPanelScreen({ onNavigate, userRole, store = 'campo'
         category_id: p.category_id ?? '',
         origin: '',
         description: p.description || '',
-        img: primaryImageUrl(p.images, 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&h=400&fit=crop&auto=format'),
+        img: primaryImageUrl(p.images),
         certified: p.certified ?? undefined,
         hasVariants: p.has_variants,
       }))

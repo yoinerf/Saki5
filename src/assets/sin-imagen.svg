@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Sin imagen">
+  <rect width="800" height="600" fill="#F1EAE0"/>
+  <path d="M0 470 Q200 410 400 455 T800 440 V600 H0Z" fill="#E4D8C6"/>
+  <path d="M0 520 Q220 480 420 515 T800 505 V600 H0Z" fill="#D8C9B3"/>
+  <g transform="translate(400 270)" fill="none" stroke="#205134" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <circle r="92" fill="#EAF3EC" stroke="#C8E6C9" stroke-width="6"/>
+    <path d="M0 52 V-6"/>
+    <path d="M0 4 C-6 -38 -38 -52 -62 -46 C-60 -18 -36 4 0 4Z" fill="#2E7D4F"/>
+    <path d="M0 -14 C6 -54 38 -66 62 -60 C60 -32 36 -12 0 -14Z" fill="#2E7D4F"/>
+    <path d="M-34 52 H34"/>
+  </g>
+  <text x="400" y="420" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="30" font-weight="600" fill="#205134">Sin imagen</text>
+</svg>

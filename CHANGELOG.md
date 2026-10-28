@@ -15,6 +15,10 @@ Cambios importantes de El Campo Nos Une, de la versión más reciente a la más 
 - Código y archivos sin uso: `SuccessToast`, imágenes `banner-campo*.webp` y `public/favicon.png`.
 - Dependencias de desarrollo sin uso (`sharp`, `oxfmt`). El servidor de desarrollo ya no se expone en
   toda la red por defecto (`vite` sin `--host 0.0.0.0`).
+- Imágenes de relleno cargadas desde Unsplash. Los productos y experiencias sin foto muestran una imagen
+  genérica propia (`src/assets/sin-imagen.svg`); el inicio de sesión, el registro y el banner de
+  experiencias usan el banner propio, y el perfil muestra la inicial del nombre. La CSP ya no permite
+  `images.unsplash.com`.
 
 **Changed**
 - Para verificar a un productor y permitirle publicar solo es obligatorio el RUT aprobado. La Cámara
