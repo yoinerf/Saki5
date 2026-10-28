@@ -1,6 +1,6 @@
 // Tipos del catálogo (productos y carrito) compartidos por marketplace, checkout y App
 import type { Database } from './database.types'
-import sinImagen from '../assets/sin-imagen.svg'
+import sinImagen from '../assets/sin-imagen.webp'
 import { cartLineKey, variantPrice, type ProductVariant, type VariantAttribute } from './variants'
 
 /** Fila de public.images (embebida en products/experiences con images(*)) */
