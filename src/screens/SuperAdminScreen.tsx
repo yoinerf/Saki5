@@ -288,7 +288,7 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
         unit: p.unit ?? '',
         category_id: p.category_id ?? '',
         description: p.description ?? '',
-        img: primaryImageUrl(p.images, 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=300&fit=crop'),
+        img: primaryImageUrl(p.images),
         certified: p.certified ?? undefined,
       }))
       setProducts(mappedProds)
@@ -302,7 +302,7 @@ export default function SuperAdminScreen({ onNavigate }: Props) {
         capacity: e.capacity ?? '',
         duration: e.duration ?? '',
         description: e.description ?? '',
-        img: primaryImageUrl(e.images, 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=400&h=300&fit=crop'),
+        img: primaryImageUrl(e.images),
         tags: e.tags ?? [],
       }))
       setExperiences(mappedExps)

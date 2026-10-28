@@ -1,5 +1,6 @@
 // Tipos del catálogo (productos y carrito) compartidos por marketplace, checkout y App
 import type { Database } from './database.types'
+import sinImagen from '../assets/sin-imagen.svg'
 import { cartLineKey, variantPrice, type ProductVariant, type VariantAttribute } from './variants'
 
 /** Fila de public.images (embebida en products/experiences con images(*)) */
@@ -61,7 +62,10 @@ export function hasVariants(product: Pick<Product, 'variants'>) {
   return (product.variants?.length ?? 0) > 0
 }
 
+/** Imagen genérica para productos y experiencias que aún no tienen foto */
+export const PLACEHOLDER_IMG = sinImagen
+
 /** Imagen principal de un producto/experiencia, o la de respaldo */
-export function primaryImageUrl(images: ImageRow[] | null | undefined, fallback: string) {
+export function primaryImageUrl(images: ImageRow[] | null | undefined, fallback: string = PLACEHOLDER_IMG) {
   return images?.find((i) => i.is_primary)?.image_url || images?.[0]?.image_url || fallback
 }

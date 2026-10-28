@@ -135,7 +135,7 @@ export default function MarketplaceScreen({
 
         const catName = categoriesData?.find((c) => c.id === p.category_id)?.name || 'Sin categoría'
         const { attributes: variantAttributes, variants } = normalizeVariants(p.product_variant_attributes, p.product_variants)
-        const primaryImg = primaryImageUrl(p.images, 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=900&h=700&fit=crop&auto=format')
+        const primaryImg = primaryImageUrl(p.images)
 
         // Usar el nombre actual del perfil si está disponible (para reflejar cambios de organización)
         const profile = p.profiles

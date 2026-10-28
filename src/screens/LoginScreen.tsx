@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase, authRedirectInfo, authRedirectUrl } from '../lib/supabase'
 import { isValidEmail } from '../lib/validation'
 import logoSrc from '../assets/logo-nofond.png'
+import bannerPrincipal from '../assets/banner-principal.webp'
 import GoogleSignInButton, { AuthDivider } from '../components/GoogleSignInButton'
 import LegalNotice from '../components/LegalNotice'
 
@@ -110,7 +111,7 @@ export default function LoginScreen({ onLogin, onRegister, onBackToStore, onBack
           flex: '1 1 50%',
           minHeight: '100vh',
           position: 'relative',
-          backgroundImage: 'url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1600&auto=format&fit=crop")',
+          backgroundImage: `url(${bannerPrincipal})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center 35%',
           backgroundRepeat: 'no-repeat',

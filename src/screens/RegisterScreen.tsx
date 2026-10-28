@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import logoSrc from '../assets/logo-nofond.png'
+import bannerPrincipal from '../assets/banner-principal.webp'
 import LocationFields from '../components/LocationFields'
 import DocumentFields from '../components/DocumentFields'
 import GoogleSignInButton, { AuthDivider } from '../components/GoogleSignInButton'
@@ -783,7 +784,7 @@ export default function RegisterScreen({ onComplete, onLogin, onBackToStore, onB
           flex: '1 1 50%',
           minHeight: '100vh',
           position: 'relative',
-          backgroundImage: 'url("https://images.unsplash.com/photo-1592417817098-8f3d69102a5e?q=80&w=1600&auto=format&fit=crop")',
+          backgroundImage: `url(${bannerPrincipal})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center 40%',
           backgroundRepeat: 'no-repeat',

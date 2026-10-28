@@ -111,7 +111,7 @@ export default function TourismScreen({ onRequireAuth, onNavigate, activeNav, on
       const processed: Experience[] = (experiencesData || []).map((exp) => {
         const avg = exp.rating ?? 5
 
-        const primaryImg = primaryImageUrl(exp.images, 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900&h=700&fit=crop&auto=format')
+        const primaryImg = primaryImageUrl(exp.images)
 
         const profile = exp.profiles
         const hostName = profile
