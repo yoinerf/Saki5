@@ -1,0 +1,91 @@
+# Azure Pipelines: verificación y despliegue a Azure Static Web Apps.
+# Equivale al workflow de GitHub Actions (.github/workflows/azure-static-web-apps-*.yml).
+# Los secretos viven en el grupo de variables "saki5-secretos" (Pipelines > Library).
+
+trigger:
+  branches:
+    include:
+      - main
+      - dev
+
+# En Azure Repos las validaciones de PR se configuran con una directiva de rama (Build validation)
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: saki5-secretos
+  - name: PNPM_VERSION
+    value: 10.34.3
+  - name: NODE_VERSION
+    value: 22.x
+
+stages:
+  # Tipos, lint, pruebas y build antes de desplegar: un error no llega a producción
+  - stage: Verificar
+    displayName: Typecheck, lint, test y build
+    jobs:
+      - job: verificar
+        displayName: Verificar y compilar
+        steps:
+          - checkout: self
+            fetchDepth: 1
+
+          - task: NodeTool@0
+            displayName: Instalar Node $(NODE_VERSION)
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - script: npm install -g pnpm@$(PNPM_VERSION)
+            displayName: Instalar pnpm $(PNPM_VERSION)
+
+          - script: pnpm install --frozen-lockfile
+            displayName: Instalar dependencias
+
+          - script: pnpm run typecheck
+            displayName: Typecheck
+
+          - script: pnpm run lint
+            displayName: Lint
+
+          - script: pnpm run test
+            displayName: Pruebas
+
+          # Las variables secretas no llegan solas al entorno: hay que pasarlas una por una
+          - script: pnpm run build
+            displayName: Build
+            env:
+              VITE_SUPABASE_URL: $(VITE_SUPABASE_URL)
+              VITE_SUPABASE_ANON_KEY: $(VITE_SUPABASE_ANON_KEY)
+              VITE_GOOGLE_CLIENT_ID: $(VITE_GOOGLE_CLIENT_ID)
+
+          - publish: dist
+            artifact: sitio
+            displayName: Guardar el build
+
+  # Solo main despliega a producción
+  - stage: Desplegar
+    displayName: Desplegar a Azure Static Web Apps
+    dependsOn: Verificar
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: desplegar
+        displayName: Subir a Static Web Apps
+        steps:
+          - checkout: none
+
+          - task: DownloadPipelineArtifact@2
+            displayName: Descargar el build
+            inputs:
+              artifact: sitio
+              path: $(System.DefaultWorkingDirectory)/dist
+
+          # Se sube el build ya hecho con pnpm; Oryx no vuelve a compilar con npm
+          - task: AzureStaticWebApp@0
+            displayName: Desplegar
+            inputs:
+              app_location: dist
+              skip_app_build: true
+              skip_api_build: true
+              azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
