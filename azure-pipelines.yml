@@ -43,6 +43,27 @@ stages:
           - script: pnpm install --frozen-lockfile
             displayName: Instalar dependencias
 
+          # Si una variable no existe en el grupo, Azure deja el texto "$(NOMBRE)" sin avisar y el sitio queda sin base de datos
+          - script: |
+              falla=0
+              for nombre in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_GOOGLE_CLIENT_ID; do
+                valor="${!nombre}"
+                if [ -z "$valor" ] || [[ "$valor" == *'$('* ]] || [[ "$valor" =~ [[:space:]\"\'] ]]; then
+                  echo "##vso[task.logissue type=error]$nombre falta, está vacía o tiene espacios o comillas en el grupo saki5-secretos"
+                  falla=1
+                fi
+              done
+              if [[ ! "$VITE_SUPABASE_URL" =~ ^https://[a-z0-9]+\.supabase\.co$ ]]; then
+                echo "##vso[task.logissue type=error]VITE_SUPABASE_URL debe ser https://<proyecto>.supabase.co, sin / al final"
+                falla=1
+              fi
+              exit $falla
+            displayName: Revisar variables del grupo saki5-secretos
+            env:
+              VITE_SUPABASE_URL: $(VITE_SUPABASE_URL)
+              VITE_SUPABASE_ANON_KEY: $(VITE_SUPABASE_ANON_KEY)
+              VITE_GOOGLE_CLIENT_ID: $(VITE_GOOGLE_CLIENT_ID)
+
           - script: pnpm run typecheck
             displayName: Typecheck
 
