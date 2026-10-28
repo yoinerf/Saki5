@@ -85,11 +85,11 @@ stages:
             artifact: sitio
             displayName: Guardar el build
 
-  # Solo main despliega a producción
+  # main despliega a producción; dev, al ambiente de pruebas "dev" de la misma Static Web App
   - stage: Desplegar
     displayName: Desplegar a Azure Static Web Apps
     dependsOn: Verificar
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/dev'))
     jobs:
       - job: desplegar
         displayName: Subir a Static Web Apps
@@ -110,3 +110,5 @@ stages:
               skip_app_build: true
               skip_api_build: true
               azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
+              ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/dev') }}:
+                deployment_environment: dev
