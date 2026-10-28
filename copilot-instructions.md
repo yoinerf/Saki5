@@ -1,12 +1,12 @@
 ---
 name: CampoConecta Project Instructions
-description: "React 19 + Vite + Tailwind CSS v4 project running in Figma Make. Use when: writing React components, building screens, organizing TypeScript code, styling with Tailwind, or working on CampoConecta features."
+description: "React 19 + Vite + Tailwind CSS v4 + Supabase project. Use when: writing React components, building screens, organizing TypeScript code, styling with Tailwind, or working on CampoConecta features."
 applyTo: ["**/*.tsx", "**/*.ts", "src/**"]
 ---
 
 # CampoConecta Development Guide
 
-This project is a React 19 + Vite + Tailwind CSS v4 application integrated with Figma Make. Follow these conventions to maintain consistency and quality.
+This project is a React 19 + Vite + Tailwind CSS v4 application backed by Supabase. Follow these conventions to maintain consistency and quality.
 
 ## React & TypeScript Patterns
 
@@ -99,25 +99,17 @@ This project is a React 19 + Vite + Tailwind CSS v4 application integrated with 
 - Group imports: React first, then third-party, then local
   ```typescript
   import React, { useState } from 'react';
-  import { Button, Card } from '@ui/components';
-  import { HomeScreen } from '@/screens/HomeScreen';
+  import HomeScreen from '@/screens/HomeScreen';
   import { supabase } from '@/lib/supabase';
   ```
 - Use the `@` alias for `src/` imports (configured in `vite.config.ts`)
 - Tree-shake unused imports
 
-## Figma Make Integration
+## Build & Preview
 
-### Environment & Plugin Behavior
-- The Vite dev server runs automatically on `$PORT` (default 8443); do NOT start it manually
-- Changes to source files hot-reload immediately in the Figma preview
-- Use React 19 and TypeScript 5.7 (locked in `.mise.toml`)
-- The `@vitejs/plugin-react` handles JSX transformation
-
-### Build & Preview
-- Run `pnpm build` to create production bundle
-- Run `pnpm preview` to test production build locally
-- Use `pnpm run dev` only if needed outside the Figma plugin environment
+- Run `pnpm dev` for the local dev server
+- Run `pnpm build` to create the production bundle
+- Run `pnpm preview` to test the production build locally
 
 ## Testing & Validation
 
@@ -125,8 +117,7 @@ Before committing:
 1. Ensure all components export as defaults
 2. Verify all JSX is properly closed and balanced
 3. Check that no `any` types are used
-4. Run `pnpm format` to apply oxfmt formatting
-5. Test components in the Figma preview
+4. Run `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build`
 
 ## When in Doubt
 

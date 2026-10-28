@@ -6,7 +6,7 @@ import { isAdvertisementActive } from '../lib/dateColombia'
 import AutoCarousel from '../components/AutoCarousel'
 import bannerPrincipal from '../assets/banner-principal.webp'
 import type { Tab, UserRole } from '../lib/types'
-import { primaryImageUrl } from '../lib/catalog'
+import { PLACEHOLDER_IMG, primaryImageUrl } from '../lib/catalog'
 import { fetchSellerSales } from '../lib/orders'
 
 
@@ -88,8 +88,6 @@ function getColombianGreeting(): { text: string; icon: string } {
   return { text: 'Buenas noches', icon: '🌙' }
 }
 
-const PLACEHOLDER_PRODUCT_IMG = 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=900&h=700&fit=crop&auto=format'
-const PLACEHOLDER_EXPERIENCE_IMG = 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900&h=700&fit=crop&auto=format'
 
 export default function HomeScreen({ onNavigate, activeNav, onProfileClick, userRole: propUserRole, onSelectProduct }: Props) {
   const [firstName, setFirstName] = useState('')
@@ -191,7 +189,7 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
           const stats = ratingStats.get(p.id)
           // Sin reseñas no se muestra calificación (antes se mostraba un 5 que nadie dio)
           const avg = stats?.rating ?? 0
-          const primaryImg = primaryImageUrl(p.images, PLACEHOLDER_PRODUCT_IMG)
+          const primaryImg = primaryImageUrl(p.images)
 
           const matchingAd = activeProductAds.find((ad) => ad.product_id === p.id)
           const isAdFeatured = !!matchingAd
@@ -228,7 +226,7 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
               .eq('store', 'campo')
               .maybeSingle()
             if (missingProd) {
-              const primaryImg = primaryImageUrl(missingProd.images, PLACEHOLDER_PRODUCT_IMG)
+              const primaryImg = primaryImageUrl(missingProd.images)
               const profile = missingProd.profiles
               const producerName = profile
                 ? (profile.org_name?.trim() || `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || missingProd.producer || 'Productor')
@@ -284,7 +282,7 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
             host: experience.host ?? '',
             price: experience.price,
             tags: experience.tags ?? [],
-            img: primaryImage?.image_url || PLACEHOLDER_EXPERIENCE_IMG,
+            img: primaryImage?.image_url || PLACEHOLDER_IMG,
           }]
         })
 
@@ -553,7 +551,7 @@ export default function HomeScreen({ onNavigate, activeNav, onProfileClick, user
         onClick={() => onNavigate('tourism')}
       >
         <img
-          src="https://images.unsplash.com/photo-1717201413771-faa0210c5dae?w=700&h=240&fit=crop&auto=format"
+          src={bannerPrincipal}
           alt="Turismo comunitario"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />

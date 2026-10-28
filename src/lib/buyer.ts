@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { PAYMENT_METHOD_LABELS } from './stores'
-import type { ShippingAddress } from './catalog'
+import { PLACEHOLDER_IMG, type ShippingAddress } from './catalog'
 
 export { PAYMENT_METHOD_LABELS }
 
@@ -100,7 +100,7 @@ export async function removeFavoriteById(id: string) {
 }
 
 export function primaryImage(images?: { image_url: string; is_primary: boolean }[] | null) {
-  return images?.find((i) => i.is_primary)?.image_url || images?.[0]?.image_url || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=300&fit=crop'
+  return images?.find((i) => i.is_primary)?.image_url || images?.[0]?.image_url || PLACEHOLDER_IMG
 }
 
 // ─── Solicitudes y reportes ─────────────────────────────────────────────────

@@ -1,41 +1,31 @@
-# figma-make-app
+# Saki5 · El Campo Nos Une
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+Marketplace de productos del campo colombiano y turismo comunitario. React 19 + Vite + Tailwind CSS v4 en el
+frontend; toda la lógica de servidor vive en Supabase (RLS, RPCs, Edge Functions).
 
-## Development Server
+## Comandos
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+- `pnpm dev` - servidor de desarrollo de Vite
+- `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm build` - lo mismo que corre el CI antes de desplegar
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+## Estructura
 
-## Project Structure
+- `src/main.tsx` - punto de entrada; importa `src/index.css` y monta `src/App.tsx`
+- `src/App.tsx` - componente principal y navegación entre pantallas
+- `src/screens/` - pantallas; `src/components/` - componentes compartidos; `src/lib/` - lógica, tipos y acceso a Supabase
+- `src/index.css` - CSS global e import de Tailwind CSS v4
+- `index.html` - HTML base con metadatos SEO
+- `public/staticwebapp.config.json` - rutas y cabeceras de seguridad (CSP) de Azure Static Web Apps
+- `supabase/migrations/` - migraciones SQL; `supabase/functions/` - Edge Functions (Deno)
+- `vite.config.ts` - React, Tailwind CSS v4 y el alias `@` para `src`
 
-This is the canonical project structure. Start with task-relevant files below. Only follow imports or inspect other files when required, when a documented path is missing, or when the repository contradicts this guide.
+## Despliegue
 
-- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
-- `src/App.tsx` - Primary application component and the usual starting point for UI work
-- `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
-- `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
-- `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React, Tailwind CSS v4, and Figma Make plugins plus the `@` alias for `src`
-- `.mise.toml` - Toolchain versions for Node.js and pnpm
+Azure Static Web Apps (`.github/workflows/`). El CI instala con pnpm (`pnpm-lock.yaml`) y Azure (Oryx) con npm
+(`package-lock.json`): al cambiar dependencias hay que actualizar los dos lockfiles.
 
-## Dependencies
+## Estilo de código
 
-- Runtime: React 19 and React DOM 19
-- Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
-- Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
-- Formatting: oxfmt
-
-## Styling
-
-This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin configured in `vite.config.ts`. `src/index.css` imports Tailwind with `@import 'tailwindcss';`. Use Tailwind utility classes directly in JSX and put global CSS or Tailwind v4 theme customization in `src/index.css`. This scaffold does not need a Tailwind config file or PostCSS config.
-
-`src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
-
-## Code quality
-
-- Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.
-- Ensure JSX tags are closed and braces are balanced.
-- Export components as default exports.
+- Strings con apóstrofo entre comillas dobles (`"We're here"`), o escapado en comillas simples.
+- Los componentes se exportan como `export default`.
+- Código, comentarios y textos de la interfaz en español.

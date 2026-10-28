@@ -191,11 +191,23 @@ export default function ProfileScreen({ userRole: propRole, onNavigate, activeNa
                   flexShrink: 0,
                 }}
               >
-                <img
-                  src="https://images.unsplash.com/photo-1509099381441-ea3c0cf98b94?w=120&h=120&fit=crop&auto=format"
-                  alt="Perfil"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#EAF3EC',
+                    color: '#205134',
+                    fontSize: 28,
+                    fontWeight: 700,
+                    fontFamily: "'Poppins', sans-serif",
+                  }}
+                >
+                  {name.trim().charAt(0).toUpperCase() || '?'}
+                </div>
               </div>
               <div style={{ flex: 1 }}>
                 {editing ? (

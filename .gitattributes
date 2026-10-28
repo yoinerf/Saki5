@@ -121,8 +121,6 @@ src/assets/*.jpeg    -filter -diff -merge text
 *.nc                 filter=lfs diff=lfs merge=lfs -text
 *.mat                filter=lfs diff=lfs merge=lfs -text
 src/assets/logo-nofond.png !text !filter !merge !diff
-src/assets/banner-campo.webp !text !filter !merge !diff
-src/assets/banner-campo.png !text !filter !merge !diff
 src/assets/banner-principal.webp !text !filter !merge !diff
 # Íconos del navegador: archivos normales (el checkout de Azure no descarga LFS y servía el puntero)
 public/*.png !text !filter !merge !diff

@@ -9,7 +9,6 @@ vite.config.*.timestamp-*
 *-debug.log*
 logs/
 *.log
-.claude-replay.*
 .tmp-*
 instructions/
 *.md
@@ -17,13 +16,6 @@ instructions/
 # Historial de versiones de la app (sí se versiona)
 !CHANGELOG.md
 
-
-# Platform-managed agentplat state, not project source. In the
-# client-initiated single-repo workspace layout (make's `Path: "."` spec) the
-# repo root IS the workspace root, so these land inside this repo rather than
-# beside it.
-/.plugins/
-/.opencode-skills/
 
 # Estado local del CLI de Supabase (no es código del proyecto)
 supabase/.temp/
