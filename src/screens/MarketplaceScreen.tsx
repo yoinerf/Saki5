@@ -6,6 +6,7 @@ import { hasSeenPromoInSession, markPromoAsSeenInSession } from '../lib/promoSes
 import { isAdvertisementActive } from '../lib/dateColombia'
 import { MAIN_STORE, cartKey, isMainStore, type StoreId } from '../lib/stores'
 import { useStores } from '../lib/storesContext'
+import { getStoreBranding } from '../lib/storeBranding'
 import { canCurrentUserPublish, confirmGoToDocuments } from '../lib/producerDocuments'
 import { requestPanelSection } from '../lib/notifications'
 import { alertDialog } from '../components/ConfirmDialog'
@@ -41,6 +42,7 @@ export default function MarketplaceScreen({
   // Tienda aliada: vitrina con su propia marca (store_settings)
   const isAllied = !isMainStore(store)
   const storeConfig = useStores().getStore(store)
+  const branding = getStoreBranding(storeConfig.slug)
   const payFirst = !storeConfig.payment_methods.includes('CashOnDelivery')
   const [activeFilter, setActiveFilter] = useState('Todos')
   const [searchVal, setSearchVal] = useState('')
@@ -1125,7 +1127,17 @@ export default function MarketplaceScreen({
             </div>
           )}
 
-          {/* ══ BANNER TIENDA ══ */}
+                   {/* ══ BANNER TIENDA ══ */}
+          {isAllied && branding.banner ? (
+            <div style={{ margin: '0 -18px 20px', borderRadius: '0 0 28px 28px', overflow: 'hidden', background: '#0F2E1B' }}>
+              <img
+                src={branding.banner}
+                alt={storeConfig.name}
+                style={{ width: '100%', minHeight: 110, objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+              />
+              <h1 className="sr-only">{storeConfig.tagline || `Productos de ${storeConfig.name}`}</h1>
+            </div>
+          ) : (
           <div
             style={{
               // Tiendas aliadas: verde; El Campo Nos Une: naranja
@@ -1145,6 +1157,7 @@ export default function MarketplaceScreen({
             <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: 22, color: '#FFFFFF', margin: '4px 0 4px', fontWeight: 700, lineHeight: 1.2 }}>{isAllied ? storeConfig.tagline || `Productos de ${storeConfig.name}` : 'Productos del campo'}</h1>
             <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: "'Nunito Sans', sans-serif" }}>{isAllied ? storeConfig.description || (payFirst ? 'Tu pedido se envía cuando se confirma el pago' : 'Directo de quienes los producen') : 'Frescos y directos de productores colombianos'}</p>
           </div>
+          )}
 
           {/* ══ ANUNCIOS DESTACADOS ACTIVOS (Valida fechas de activación y tipo producto) ══ */}
           {activeAds.filter(isAdvertisementActive).filter((a) => a.type === 'product' && a.product_id && products.some((p) => p.id === a.product_id)).length > 0 && (
