@@ -9,6 +9,7 @@ import { ROLE_LABELS, sellerRole } from '../lib/roles'
 import NotificationBell from './NotificationBell'
 import logoSrc from '../assets/logo-nofond.png'
 import { isTab, type Tab, type UserRole } from '../lib/types'
+import { getStoreBranding } from '../lib/storeBranding'
 import type { User } from '@supabase/supabase-js'
 
 type NavTab = Tab
@@ -70,6 +71,7 @@ export default function ScreenShell({
   const canSwitchToBuyer = (userRole === 'asociacion' || userRole === 'turismo') && roles.includes('comprador')
   const isAllied = !isMainStore(store)
   const storeConfig = getStore(store)
+  const branding = getStoreBranding(storeConfig.slug)
   const isSeller = userRole === 'asociacion' || userRole === 'turismo'
   const isStoreAdmin = userRole === 'admin_tienda'
   // Vendedores y administradores de tienda trabajan desde su panel: sin menú de la tienda
@@ -162,9 +164,22 @@ export default function ScreenShell({
             aria-label="Ir al inicio"
           >
             {isAllied ? (
-              <span className="text-base w-[100px] md:w-auto md:text-2xl md:whitespace-nowrap" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, color: '#205134', lineHeight: 1.1, display: 'block' }}>
-                {storeConfig.name}
-              </span>
+              branding.logo ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img
+                    src={branding.logo}
+                    alt={storeConfig.name}
+                    style={{ height: 56, width: 56, display: 'block', flexShrink: 0 }}
+                  />
+                  <span className="hidden md:block md:whitespace-nowrap" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: 22, color: '#205134', lineHeight: 1.1 }}>
+                    {storeConfig.name}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-base w-[100px] md:w-auto md:text-2xl md:whitespace-nowrap" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, color: '#205134', lineHeight: 1.1, display: 'block' }}>
+                  {storeConfig.name}
+                </span>
+              )
             ) : (
               <img
                 src={logoSrc}
